@@ -3,21 +3,26 @@ import { Assets, Container, Graphics, Texture, type Renderer } from 'pixi.js'
 export interface GameTextures {
   seeker: Texture; tree: Texture; ore: Texture; campfire: Texture; post: Texture; phantom: Texture
   axe: Texture; wood: Texture; fluorite: Texture; sapling: Texture; heart: Texture
+  torchIcon: Texture // 程序生成(火把素材未出图)
 }
 
-const FILES: Record<keyof GameTextures, string> = {
+type LoadableTex = Exclude<keyof GameTextures, 'torchIcon'>
+const FILES: Record<LoadableTex, string> = {
   seeker: 'seeker.png', tree: 'whisper-tree.png', ore: 'lumina-ore.png',
   campfire: 'campfire.png', post: 'lantern-post.png', phantom: 'phantom.png',
   axe: 'axe.png', wood: 'wood.png', fluorite: 'fluorite.png', sapling: 'sapling.png', heart: 'heart.png',
 }
 
-/** 物品图标/掉落物纹理（lanternPost 复用立绘） */
+/** 物品图标/掉落物纹理（lanternPost/campfire 复用立绘;torch 用程序图标） */
 export function iconTex(t: GameTextures, k: import('../sim/types').ItemKind): Texture {
-  return k === 'lanternPost' ? t.post : t[k]
+  if (k === 'lanternPost') return t.post
+  if (k === 'torch') return t.torchIcon
+  if (k === 'campfire') return t.campfire
+  return t[k]
 }
 
 /** 素材缺失时的程序占位（形状 y 以脚底为 0 向上为负） */
-const builders: Record<keyof GameTextures, (g: Graphics) => void> = {
+const builders: Record<LoadableTex, (g: Graphics) => void> = {
   seeker(g) {
     g.roundRect(-20, -78, 40, 78, 12).fill(0x8a8f7a)
     g.circle(0, -64, 15).fill(0x6f7462)
@@ -76,7 +81,7 @@ const builders: Record<keyof GameTextures, (g: Graphics) => void> = {
   },
 }
 
-async function loadOne(renderer: Renderer, name: keyof GameTextures): Promise<Texture> {
+async function loadOne(renderer: Renderer, name: LoadableTex): Promise<Texture> {
   let tex: Texture
   try {
     tex = await Assets.load<Texture>(`./assets/${FILES[name]}`)
@@ -100,5 +105,13 @@ export async function loadTextures(renderer: Renderer): Promise<GameTextures> {
     loadOne(renderer, 'axe'), loadOne(renderer, 'wood'), loadOne(renderer, 'fluorite'),
     loadOne(renderer, 'sapling'), loadOne(renderer, 'heart'),
   ])
-  return { seeker, tree, ore, campfire, post, phantom, axe, wood, fluorite, sapling, heart }
+  // 火把图标:素材未出图,程序绘制(木柄+焰头)
+  const tc = new Container()
+  const tg = new Graphics()
+  tg.roundRect(-4, -20, 8, 40, 3).fill(0x6b4a2a)
+  tg.circle(0, -26, 10).fill(0xffb050)
+  tg.circle(0, -28, 5).fill(0xffe29a)
+  tc.addChild(tg)
+  const torchIcon = renderer.generateTexture(tc)
+  return { seeker, tree, ore, campfire, post, phantom, axe, wood, fluorite, sapling, heart, torchIcon }
 }

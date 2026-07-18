@@ -10,6 +10,7 @@ const CELL = 46
 const GAP = 6
 const NAMES: Record<ItemKind, string> = {
   axe: '共鸣木斧', wood: '低语木材', fluorite: '萤石', sapling: '低语树苗', lanternPost: '提灯柱',
+  torch: '火把', campfire: '篝火',
 }
 
 interface Toast { text: string; t: number }
@@ -87,6 +88,9 @@ export class UI {
   private serenity: number = CONFIG.serenity.initial
   private afford: boolean[] = []
   private flower = new Graphics()
+  private clockDial = new Graphics()
+  private clockPhase: import('../sim/clock').DayPhase = 'day'
+  private clockFrac = 0
   private lastPetals = -1
   private hintText = new Text({ text: '', style: style(15, 0xe8e2d0) })
   private hintBg = new Graphics()
@@ -162,7 +166,7 @@ export class UI {
     this.toastC.visible = false
     this.nameFloat.anchor.set(0.5)
     this.container.addChild(
-      this.flower, this.hearts, this.hotbar, this.nameFloat,
+      this.flower, this.clockDial, this.hearts, this.hotbar, this.nameFloat,
       this.hint, this.toastC, this.bag, this.heldSprite, this.heldCount,
     )
   }
@@ -175,6 +179,11 @@ export class UI {
 
   /** 拾取入包的计数跳动 */
   bump(): void { this.bumpT = 0 }
+
+  setClock(phase: import('../sim/clock').DayPhase, frac: number): void {
+    this.clockPhase = phase
+    this.clockFrac = frac
+  }
 
   sync(w: WorldState): void {
     if (w.selected !== this.selected) {
@@ -266,6 +275,13 @@ export class UI {
       this.flower.circle(0, 0, 6).fill(col)
     }
     this.flower.position.set(64, height - 64)
+    // 日月盘:全天进度绕盘一周,日金/暮橙/夜蓝
+    this.clockDial.position.set(64, height - 128)
+    const dialCol = this.clockPhase === 'day' ? 0xffd98a : this.clockPhase === 'dusk' ? 0xff9a50 : 0x9ab8d8
+    const ang = this.clockFrac * Math.PI * 2 - Math.PI / 2
+    this.clockDial.clear()
+      .circle(0, 0, 15).stroke({ color: 0xd8d2bd, width: 1.5, alpha: 0.35 })
+      .circle(Math.cos(ang) * 15, Math.sin(ang) * 15, 4.5).fill({ color: dialCol, alpha: 0.95 })
     this.flower.rotation = Math.sin(timeS * 0.8) * 0.05
     // 选中物品名浮签
     this.nameT += realDt

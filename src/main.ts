@@ -3,6 +3,8 @@ import { CONFIG } from './config'
 import { Keyboard } from './input/keyboard'
 import { deriveHint } from './render/hints'
 import { LightLayer, type LightSpec } from './render/lightLayer'
+import { clockInfo } from './sim/clock'
+import { campfireLit, campfireRadius, torchRadius } from './sim/world'
 import { LostFx } from './render/lostFx'
 import { Particles } from './render/particles'
 import { UI } from './render/ui'
@@ -107,16 +109,25 @@ async function main(): Promise<void> {
   let elapsed = 0
   let emberT = 0
 
-  // 灯表：0 号为随身提灯（每帧就地更新）；静态部分仅在破坏/放置/长成事件后重建。
-  // phase 为稳定呼吸相位种子，防止灯表增删时其余灯的呼吸跳变（终审#4）
-  const playerLight: LightSpec = { xM: 0, yM: 0, radiusM: CONFIG.light.lanternRadiusM, phase: 0 }
+  // 灯表：0 号为随身光(手持火把时才有)；提灯柱静态部分事件后重建；
+  // 火源(篝火/插地火把)半径随燃烧连续衰减,每帧重建。phase 稳定种子防呼吸跳变(终审#4)
+  const playerLight: LightSpec = { xM: 0, yM: 0, radiusM: 0, phase: 0 }
   const allLights: LightSpec[] = [playerLight]
   let lightsDirty = true
-  // 树/矿夜间不发光（2026-07-18 用户裁定，撤掉切片A的寻路微光）——静态灯只剩篝火与提灯柱
-  const staticLights = (st: SimState): LightSpec[] => [
-    { xM: CONFIG.campfire.x, yM: CONFIG.campfire.y - 0.5, radiusM: CONFIG.light.campfireRadiusM, flicker: 1.8, phase: 1 },
-    ...st.world.posts.map((p, i) => ({
+  const staticLights = (st: SimState): LightSpec[] =>
+    st.world.posts.map((p, i) => ({
       xM: p.x, yM: p.y - CONFIG.sizes.postH * 0.82, radiusM: CONFIG.light.postRadiusM, phase: 2 + i,
+    }))
+  const fireLights = (st: SimState): LightSpec[] => [
+    ...st.world.campfires.map((c) => ({
+      xM: c.pos.x, yM: c.pos.y - 0.5,
+      radiusM: campfireRadius(c, st.time),
+      flicker: campfireLit(c, st.time) ? 1.8 : 0.5,
+      alpha: campfireLit(c, st.time) ? 1 : 0.55,
+      phase: 30 + c.id,
+    })),
+    ...st.world.plantedTorches.map((t) => ({
+      xM: t.pos.x, yM: t.pos.y - 0.6, radiusM: torchRadius(t, st.time), flicker: 1.3, phase: 60 + t.id,
     })),
   ]
 
@@ -206,15 +217,28 @@ async function main(): Promise<void> {
       allLights.push(...staticLights(st))
       lightsDirty = false
     }
+    // 火源灯每帧重建(半径连续衰减);挂在静态段之后
+    const staticCount = 1 + staticLights(st).length
+    allLights.length = staticCount
+    allLights.push(...fireLights(st))
     playerLight.xM = ipx
     playerLight.yM = ipy - CONFIG.player.heightM * 0.45
+    playerLight.radiusM = selectedKind(st.world) === 'torch' ? CONFIG.light.torchHeldM : 0
+    // 昼夜暗幕插值
+    const ci = clockInfo(st.world.clock)
+    light.setDarkness(CONFIG.light.dayDarkness + (CONFIG.light.darkness - CONFIG.light.dayDarkness) * ci.ambient01)
+    ui.setClock(ci.phase, (st.world.clock % ci.dayLen) / ci.dayLen)
     light.update(allLights, scene.world.position, elapsed)
 
-    // 篝火火星
+    // 篝火火星(燃着的玩家篝火轮发)
     emberT -= realDt
     if (emberT <= 0) {
       emberT = 0.4 + Math.random() * 0.8
-      particles.ember(CONFIG.campfire.x + (Math.random() - 0.5) * 0.6, CONFIG.campfire.y - 0.6)
+      const lit = st.world.campfires.filter((c) => campfireLit(c, st.time))
+      if (lit.length) {
+        const c = lit[Math.floor(Math.random() * lit.length)]!
+        particles.ember(c.pos.x + (Math.random() - 0.5) * 0.6, c.pos.y - 0.6)
+      }
     }
     // 幻影注视低鸣：距离越近越响；映射到 stareExit（9m）与模式滞回一致，8-9m 带内不静默
     const ph = st.world.phantom
