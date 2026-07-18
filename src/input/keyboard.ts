@@ -9,16 +9,23 @@ export class Keyboard {
   private keys = new Set<string>()
   private interactPressed = false
   private unlocked = false
-  onFirstKey?: () => void
+  onFirstInput?: () => void
 
   attach(target: Window): void {
+    const unlock = () => {
+      if (!this.unlocked) { this.unlocked = true; this.onFirstInput?.() }
+    }
     target.addEventListener('keydown', (e) => {
-      if (!this.unlocked) { this.unlocked = true; this.onFirstKey?.() }
+      unlock()
       if (e.repeat) return
       this.keys.add(e.code)
-      if (e.code === 'KeyE') this.interactPressed = true
     })
     target.addEventListener('keyup', (e) => this.keys.delete(e.code))
+    // 采集 = 鼠标左键（切片A §4.5 修订）；E 保留给未来合成/放置
+    target.addEventListener('pointerdown', (e) => {
+      unlock()
+      if (e.button === 0) this.interactPressed = true
+    })
     target.addEventListener('blur', () => { this.keys.clear(); this.interactPressed = false })
   }
 
