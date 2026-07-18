@@ -3,7 +3,7 @@ import { CONFIG } from '../src/config'
 import { animate, type AnimSample } from '../src/render/characterAnimator'
 
 const base = (o: Partial<AnimSample> = {}): AnimSample => ({
-  action: 'idle', fromAction: 'idle' as const, facing: 1, actionT: 1, prevActionT: 0.97, gatherT: 0, prevGatherT: 0, time: 10, ...o,
+  action: 'idle', gathering: false, fromAction: 'idle' as const, facing: 1, actionT: 1, prevActionT: 0.97, gatherT: 0, prevGatherT: 0, time: 10, ...o,
 })
 
 describe('确定性与待机', () => {
@@ -48,7 +48,7 @@ describe('行走', () => {
 describe('采集', () => {
   const g = CONFIG.gather
   const at = (t: number, prev: number) =>
-    animate(base({ action: 'gathering', gatherT: t, prevGatherT: prev, actionT: t, prevActionT: prev }))
+    animate(base({ gathering: true, gatherT: t, prevGatherT: prev, actionT: t, prevActionT: prev }))
   it('蓄力末端到达后仰角', () => {
     expect(at(g.windup, g.windup - 0.01).transform.rotation).toBeCloseTo(g.backAngle, 3)
   })
@@ -68,7 +68,7 @@ describe('采集', () => {
     }
   })
   it('朝向 -1 时角度镜像', () => {
-    const r = animate(base({ action: 'gathering', facing: -1, gatherT: g.hitAt, prevGatherT: g.hitAt - 0.01, actionT: g.hitAt, prevActionT: g.hitAt - 0.01 }))
+    const r = animate(base({ gathering: true, facing: -1, gatherT: g.hitAt, prevGatherT: g.hitAt - 0.01, actionT: g.hitAt, prevActionT: g.hitAt - 0.01 }))
     expect(r.transform.rotation).toBeCloseTo(-g.chopAngle, 3)
   })
   it('命中判定容忍帧时间累积欠差', () => {
@@ -88,8 +88,41 @@ describe('停止回弹', () => {
     expect(Math.abs(early.transform.rotation)).toBeGreaterThan(Math.abs(late.transform.rotation))
     expect(late.transform.rotation).toBeCloseTo(0, 3)
   })
-  it('从采集回到待机不播放停止回弹', () => {
-    const r = animate(base({ action: 'idle', fromAction: 'gathering', actionT: 0.01, prevActionT: 0 }))
-    expect(r.transform.rotation).toBeCloseTo(0, 5)
+  it('采集中停步不播放回弹（砍曲线接管旋转）', () => {
+    const g = CONFIG.gather
+    const r = animate(base({ action: 'idle', fromAction: 'walking', gathering: true, gatherT: g.hitAt, prevGatherT: g.hitAt - 0.01, actionT: 0.01, prevActionT: 0 }))
+    expect(r.transform.rotation).toBeCloseTo(g.chopAngle, 3)
+  })
+})
+
+describe('边走边砍双通道', () => {
+  const g = CONFIG.gather
+  it('行走中采集：旋转用砍曲线，颠簸保留', () => {
+    const r = animate(base({ action: 'walking', gathering: true, gatherT: g.hitAt, prevGatherT: g.hitAt - 0.01, actionT: 0.25, prevActionT: 0.24 }))
+    expect(r.transform.rotation).toBeCloseTo(g.chopAngle, 3)
+    expect(r.transform.offsetYPx).toBeLessThan(-0.5) // 颠簸仍在（0.25s 处于波峰附近）
+  })
+  it('行走中采集脚步事件照发', () => {
+    let steps = 0
+    const dt = 1 / 30
+    for (let t = dt; t <= 1 + 1e-9; t += dt) {
+      const r = animate(base({ action: 'walking', gathering: true, gatherT: 0.1, prevGatherT: 0.1, actionT: t, prevActionT: t - dt }))
+      steps += r.events.filter((e) => e === 'footstep').length
+    }
+    expect(steps).toBe(2) // 1 秒 2 步
+  })
+  it('无缝衔接回绕后下一循环命中再次触发（两循环两命中）', () => {
+    let hits = 0
+    const dt = 1 / 30
+    let prev = 0
+    let t = 0
+    for (let i = 0; i < 72; i++) { // 两个 1.2s 循环
+      t = prev + dt
+      if (t >= g.duration) t -= g.duration
+      const r = animate(base({ gathering: true, gatherT: t, prevGatherT: t >= prev ? prev : 0, actionT: 1, prevActionT: 1 }))
+      hits += r.events.filter((e) => e === 'gatherHit').length
+      prev = t
+    }
+    expect(hits).toBe(2)
   })
 })
