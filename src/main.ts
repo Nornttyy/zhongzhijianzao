@@ -2,9 +2,11 @@ import { Application } from 'pixi.js'
 import { CONFIG } from './config'
 import { Keyboard } from './input/keyboard'
 import { LightLayer } from './render/lightLayer'
+import { Particles } from './render/particles'
 import { PlayerView } from './render/playerView'
 import { Scene } from './render/scene'
 import { loadTextures } from './render/textures'
+import { Sfx } from './audio/sfx'
 import { Sim } from './sim/sim'
 import { initialSim } from './sim/types'
 
@@ -17,17 +19,24 @@ async function main(): Promise<void> {
   document.body.appendChild(app.canvas)
 
   const textures = await loadTextures(app.renderer)
+  const particles = new Particles()
+  const sfx = new Sfx()
   const scene = new Scene(app)
   const sim = new Sim(initialSim(CONFIG.world.width / 2, CONFIG.world.height / 2))
   const kb = new Keyboard()
   kb.attach(window)
+  kb.onFirstKey = () => sfx.unlock()
   const player = new PlayerView(textures.seeker)
   scene.world.addChild(player.sprite)
+  scene.world.addChild(particles.container)
 
   const light = new LightLayer(app)
   app.stage.addChild(light.container)
 
-  const noSinks = { footstep() {}, gatherHit() {} } // Task 7 接粒子与音效
+  const sinks = {
+    footstep(xM: number, yM: number) { particles.dust(xM, yM); sfx.footstep() },
+    gatherHit(xM: number, yM: number) { particles.spark(xM, yM); sfx.knock() },
+  }
   let elapsed = 0
 
   app.ticker.add((ticker) => {
@@ -35,7 +44,8 @@ async function main(): Promise<void> {
     elapsed += realDt
     sim.advance(realDt, { ...kb.intent(), interact: kb.consumeInteract() })
     const alphaV = sim.alpha()
-    player.update(sim.prev, sim.state, alphaV, elapsed, noSinks)
+    player.update(sim.prev, sim.state, alphaV, elapsed, sinks)
+    particles.update(realDt)
     // 相机与精灵使用同一插值位置，否则每个 sim tick 相机产生锯齿抖动
     const pp = sim.prev.player.pos
     const cp = sim.state.player.pos
