@@ -70,7 +70,7 @@ describe('幻影状态机', () => {
     const s = initialSim(20, 20.8)
     const nearPh: typeof s = {
       ...s,
-      world: { ...s.world, phantom: { ...s.world.phantom, pos: { x: 20, y: 20.8 + 5 }, target: { x: 20, y: 20.8 + 5 } } },
+      world: { ...s.world, clock: CONFIG.clock.dayS + CONFIG.clock.duskS + 10, phantom: { ...s.world.phantom, pos: { x: 20, y: 20.8 + 5 }, target: { x: 20, y: 20.8 + 5 } } },
     }
     const r = stepWorld(nearPh, I(), DT)
     expect(r.events.some((e) => e.type === 'phantomSigh')).toBe(true)

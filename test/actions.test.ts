@@ -53,9 +53,10 @@ describe('move 动作与队列', () => {
 })
 
 describe('hp', () => {
-  it('篝火圈内回复并夹紧上限', () => {
+  it('燃着的玩家篝火圈内回复并夹紧上限', () => {
     const base = initialSim(20, 20.8)
-    let s: SimState = { ...base, world: { ...base.world, hp: 95 } }
+    let s: SimState = { ...base, world: { ...base.world, hp: 95,
+      campfires: [{ id: 900, pos: { x: 20, y: 20.8 }, fedAt: 0 }] } }
     for (let i = 0; i < 30; i++) s = stepWorld(s, I(), DT).state
     expect(s.world.hp).toBe(CONFIG.hp.max)
   })

@@ -1,10 +1,11 @@
 import { CONFIG } from '../config'
+import { clockInfo } from './clock'
 import { addItem, canAfford, moveSlot, payCost, takeAt } from './inventory'
 import { stepPhantom } from './phantom'
 import { stepPlayer } from './player'
 import { nextRand } from './rand'
 import { clamp, dist } from './vec'
-import type { DropEntity, IntentInput, ItemKind, ResourceNode, SimAction, SimEvent, SimState, Vec2, WorldState } from './types'
+import type { Campfire, DropEntity, IntentInput, ItemKind, PlantedTorch, ResourceNode, SimAction, SimEvent, SimState, Vec2, WorldState } from './types'
 
 const EPS = 1e-8 // 与 characterAnimator 同源的帧时间漂移容差
 
@@ -22,7 +23,7 @@ export function nearestNodeIdx(nodes: readonly ResourceNode[], pos: Vec2, rangeM
 
 export const selectedKind = (w: WorldState): ItemKind | null => w.slots[w.selected]?.kind ?? null
 
-const PLACEABLE = new Set<ItemKind>(['sapling', 'lanternPost'])
+const PLACEABLE = new Set<ItemKind>(['sapling', 'lanternPost', 'torch', 'campfire'])
 
 /** 放置校验：玩家白圈内（rangeM）、界内（edgeMargin）、与既有实体间距 ≥ spacingM */
 export function canPlaceAt(world: WorldState, playerPos: Vec2, aim: Vec2): boolean {
@@ -31,19 +32,37 @@ export function canPlaceAt(world: WorldState, playerPos: Vec2, aim: Vec2): boole
   if (aim.x < P.edgeMarginM || aim.x > CONFIG.world.width - P.edgeMarginM
     || aim.y < P.edgeMarginM || aim.y > CONFIG.world.height - P.edgeMarginM) return false
   const others: Vec2[] = [
-    CONFIG.campfire,
+    CONFIG.landmark,
     ...world.nodes.map((n) => n.pos),
     ...world.posts,
+    ...world.campfires.map((c) => c.pos),
+    ...world.plantedTorches.map((t) => t.pos),
     ...world.plantings.map((p) => p.pos),
   ]
   return others.every((o) => dist(o, aim) >= P.spacingM)
 }
 
-/** 安宁值每秒变化率：档位互斥取最高，注视为叠加项 */
-export function serenityRate(inZone: boolean, hasLantern: boolean, staring: boolean): number {
+/** 插地火把当前光圈半径:随燃烧余量线性缩小 */
+export const torchRadius = (t: PlantedTorch, now: number): number => {
+  const k = clamp(1 - (now - t.litAt) / CONFIG.fire.torchBurnS, 0, 1)
+  return CONFIG.fire.torchMinM + (CONFIG.light.torchPlantedM - CONFIG.fire.torchMinM) * k
+}
+
+/** 篝火当前光圈半径:烧尽收缩至残烬(不消失,可添柴复燃) */
+export const campfireRadius = (c: Campfire, now: number): number => {
+  const k = clamp(1 - (now - c.fedAt) / CONFIG.fire.campfireBurnS, 0, 1)
+  return CONFIG.fire.campfireEmberM + (CONFIG.light.campfireM - CONFIG.fire.campfireEmberM) * k
+}
+
+/** 篝火是否仍在燃烧(非残烬) */
+export const campfireLit = (c: Campfire, now: number): boolean =>
+  now - c.fedAt < CONFIG.fire.campfireBurnS
+
+/** 安宁值每秒变化率(分相):白昼平回升;暮/夜按火圈与注视 */
+export function serenityRate(phase: 'day' | 'dusk' | 'night', inFireZone: boolean, staring: boolean): number {
   const S = CONFIG.serenity
-  const base = inZone ? S.zoneRegen : hasLantern ? S.lanternDrain : S.darkDrain
-  return base + (staring ? S.stareDrain : 0)
+  if (phase === 'day') return S.dayRegen
+  return (inFireZone ? S.zoneRegen : S.darkDrain) + (staring ? S.stareDrain : 0)
 }
 
 /** 预留伤害入口（本切片无伤害源） */
@@ -57,6 +76,12 @@ export function stepWorld(
   const prevPlayer = s.player
   let world = s.world
   let seed = world.seed
+
+  // 昼夜时钟推进与相位事件
+  const clock = world.clock + dt
+  const ci = clockInfo(clock)
+  if (ci.phase !== clockInfo(world.clock).phase) events.push({ type: 'phase', phase: ci.phase })
+  world = { ...world, clock }
 
   // 选中热键格（先于玩家步进，挥砍门槛用最新选中）
   if (input.selectSlot >= 0 && input.selectSlot < CONFIG.inv.hotbar && input.selectSlot !== world.selected) {
@@ -140,16 +165,38 @@ export function stepWorld(
     world = { ...world, drops: remain, slots, invFullAt }
   }
 
-  // 右键放置（树苗/提灯柱通用）
+  // 右键:持木对篝火=添柴(优先);否则放置(树苗/提灯柱/火把/篝火通用)
   if (input.place) {
     const kind = selectedKind(world)
-    if (kind && PLACEABLE.has(kind) && canPlaceAt(world, player.pos, input.aim)) {
+    const fedIdx = kind === 'wood'
+      ? world.campfires.findIndex((c) => dist(c.pos, input.aim) <= CONFIG.fire.feedRangeM
+          && dist(c.pos, player.pos) <= CONFIG.place.rangeM + CONFIG.fire.feedRangeM)
+      : -1
+    if (fedIdx >= 0) {
+      const takenFeed = takeAt(world.slots, world.selected, CONFIG.fire.feedWood)
+      if (takenFeed.taken === CONFIG.fire.feedWood) {
+        const fedPos = world.campfires[fedIdx]!.pos
+        world = {
+          ...world, slots: takenFeed.slots,
+          campfires: world.campfires.map((c, i) => (i === fedIdx ? { ...c, fedAt: s.time } : c)),
+        }
+        events.push({ type: 'campfireFed', pos: fedPos })
+      }
+    } else if (kind && PLACEABLE.has(kind) && canPlaceAt(world, player.pos, input.aim)) {
       const taken = takeAt(world.slots, world.selected, 1)
       if (taken.taken === 1) {
         if (kind === 'sapling') {
           const p = { id: world.nextId, pos: input.aim, plantedAt: s.time }
           world = { ...world, slots: taken.slots, plantings: [...world.plantings, p], nextId: world.nextId + 1 }
           events.push({ type: 'planted', pos: input.aim })
+        } else if (kind === 'torch') {
+          const t = { id: world.nextId, pos: input.aim, litAt: s.time }
+          world = { ...world, slots: taken.slots, plantedTorches: [...world.plantedTorches, t], nextId: world.nextId + 1 }
+          events.push({ type: 'torchPlanted', pos: input.aim })
+        } else if (kind === 'campfire') {
+          const c = { id: world.nextId, pos: input.aim, fedAt: s.time }
+          world = { ...world, slots: taken.slots, campfires: [...world.campfires, c], nextId: world.nextId + 1 }
+          events.push({ type: 'campfirePlaced', pos: input.aim })
         } else {
           const posts = [...world.posts, input.aim]
           world = { ...world, slots: taken.slots, posts }
@@ -157,6 +204,17 @@ export function stepWorld(
         }
       }
     }
+  }
+
+  // 火源生命周期:插地火把燃尽消失;篝火烧尽瞬间发残烬事件(实体保留)
+  const burnt = world.plantedTorches.filter((t) => s.time - t.litAt >= CONFIG.fire.torchBurnS)
+  if (burnt.length) {
+    for (const t of burnt) events.push({ type: 'torchBurnt', pos: t.pos })
+    world = { ...world, plantedTorches: world.plantedTorches.filter((t) => !burnt.includes(t)) }
+  }
+  for (const c of world.campfires) {
+    const prevLit = s.time - dt - c.fedAt < CONFIG.fire.campfireBurnS
+    if (prevLit && !campfireLit(c, s.time)) events.push({ type: 'campfireEmber', pos: c.pos })
   }
 
   // 种植生长：到时转化为小树（tier0）
@@ -194,24 +252,30 @@ export function stepWorld(
     }
   }
 
-  // 血量：篝火圈内回复（本切片无伤害源，applyDamage 为预留入口）
-  const inCampfire = dist(CONFIG.campfire, player.pos) <= CONFIG.light.campfireRadiusM
-  if (inCampfire && world.hp < CONFIG.hp.max) {
-    world = { ...world, hp: clamp(world.hp + CONFIG.hp.campfireRegen * dt, 0, CONFIG.hp.max) }
+  // 血量：燃着的篝火圈内回复（残烬不回）
+  const nearLitFire = world.campfires.some((c) => campfireLit(c, s.time)
+    && dist(c.pos, player.pos) <= campfireRadius(c, s.time))
+  if (nearLitFire && world.hp < CONFIG.hp.max) {
+    world = { ...world, hp: clamp(world.hp + CONFIG.hp.fireRegen * dt, 0, CONFIG.hp.max) }
   }
 
-  // 幻影
-  const phr = stepPhantom(world.phantom, player.pos, seed, dt)
+  // 幻影(昼退暮归:黄昏最后 duskRespawnS 秒起允许活动)
+  const allowActive = ci.phase === 'night'
+    || (ci.phase === 'dusk' && ci.phaseK >= 1 - CONFIG.clock.duskRespawnS / CONFIG.clock.duskS)
+  const phr = stepPhantom(world.phantom, player.pos, seed, dt, allowActive)
   seed = phr.seed
   world = { ...world, phantom: phr.phantom }
   if (phr.sigh) events.push({ type: 'phantomSigh', pos: phr.phantom.pos })
 
-  // 安宁值结算与迷失滞回（本切片玩家恒带提灯，黑暗档为完备性保留）
-  const inZone = dist(CONFIG.campfire, player.pos) <= CONFIG.light.campfireRadiusM
+  // 安宁值分相结算:白昼平回升;暮/夜看火圈(持炬/插炬/篝火/提灯柱)与注视
+  const heldTorch = selectedKind(world) === 'torch'
+  const inFireZone = heldTorch
     || world.posts.some((p) => dist(p, player.pos) <= CONFIG.light.postRadiusM)
-  // 注视掉率跟随 stare 模式本身的 8m 进/9m 出滞回，不再二次卡距离（终审#1：避免 8-9m 死区与边界拍抖）
+    || world.campfires.some((c) => dist(c.pos, player.pos) <= campfireRadius(c, s.time))
+    || world.plantedTorches.some((t) => dist(t.pos, player.pos) <= torchRadius(t, s.time))
+  // 注视掉率跟随 stare 模式本身滞回（终审#1）
   const staring = world.phantom.mode === 'stare'
-  const serenity = clamp(world.serenity + serenityRate(inZone, true, staring) * dt, 0, CONFIG.serenity.max)
+  const serenity = clamp(world.serenity + serenityRate(ci.phase, inFireZone, staring) * dt, 0, CONFIG.serenity.max)
   let lost = world.lost
   if (!lost && serenity < CONFIG.serenity.lostBelow) { lost = true; events.push({ type: 'lostEnter' }) }
   else if (lost && serenity >= CONFIG.serenity.clearAt) { lost = false; events.push({ type: 'lostExit' }) }

@@ -11,7 +11,7 @@ function pickWaypoint(seed: number): { target: Vec2; seed: number } {
   const ang = r1.value * Math.PI * 2
   const rad = P.ringMin + r2.value * (P.ringMax - P.ringMin)
   return {
-    target: { x: CONFIG.campfire.x + Math.cos(ang) * rad, y: CONFIG.campfire.y + Math.sin(ang) * rad },
+    target: { x: CONFIG.landmark.x + Math.cos(ang) * rad, y: CONFIG.landmark.y + Math.sin(ang) * rad },
     seed: r2.seed,
   }
 }
@@ -23,23 +23,28 @@ function respawn(seed: number, playerPos: Vec2): { pos: Vec2; seed: number } {
     seed = w.seed
     if (dist(w.target, playerPos) >= CONFIG.phantom.respawnMinDist) return { pos: w.target, seed }
   }
-  const dx = CONFIG.campfire.x - playerPos.x
-  const dy = CONFIG.campfire.y - playerPos.y
+  const dx = CONFIG.landmark.x - playerPos.x
+  const dy = CONFIG.landmark.y - playerPos.y
   const len = Math.hypot(dx, dy) || 1
   const R = CONFIG.phantom.ringMax
-  return { pos: { x: CONFIG.campfire.x + (dx / len) * R, y: CONFIG.campfire.y + (dy / len) * R }, seed }
+  return { pos: { x: CONFIG.landmark.x + (dx / len) * R, y: CONFIG.landmark.y + (dy / len) * R }, seed }
 }
 
 export function stepPhantom(
-  ph: PhantomState, playerPos: Vec2, seed: number, dt: number,
+  ph: PhantomState, playerPos: Vec2, seed: number, dt: number, allowActive = true,
 ): { phantom: PhantomState; seed: number; sigh: boolean } {
   const P = CONFIG.phantom
   const d = dist(ph.pos, playerPos)
   let { pos, mode, modeT, alpha, target } = ph
   let sigh = false
 
+  // 白昼压制:活动态强制消散(无叹息),gone 停留不返场
+  if (!allowActive && (mode === 'wander' || mode === 'stare')) {
+    mode = 'fade'; modeT = 0
+  }
+
   // 距离触发的转移（fade/gone 内不响应）
-  if (mode === 'wander' || mode === 'stare') {
+  if (allowActive && (mode === 'wander' || mode === 'stare')) {
     if (d <= P.dissolveRange) { mode = 'fade'; modeT = 0; sigh = true }
     else if (mode === 'wander' && d <= P.stareRange) { mode = 'stare'; modeT = 0 }
     else if (mode === 'stare' && d > P.stareExit) { mode = 'wander'; modeT = 0 }
@@ -69,7 +74,7 @@ export function stepPhantom(
     }
     case 'gone': {
       modeT += dt
-      if (modeT >= P.goneDur) {
+      if (allowActive && modeT >= P.goneDur) { // 白昼压制期不返场,入夜(或黄昏末)才重生
         const r = respawn(seed, playerPos)
         pos = r.pos; seed = r.seed; target = r.pos
         mode = 'wander'; modeT = 0; alpha = 0
