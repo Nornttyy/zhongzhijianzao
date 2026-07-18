@@ -131,6 +131,9 @@ def cut(src, dst, tol=38, preview=None, keep_islands=False, min_hole=800):
     if not keep_islands:
         fg = largest_component(fg, w, h)
     fg = remove_enclosed_holes(px, fg, w, h, bg, tol + 6, min_hole)
+    if not keep_islands:
+        # 孔洞清除可能把孔内残渣（阴影线碎屑）孤立成飞点，再过滤一次
+        fg = largest_component(fg, w, h)
 
     alpha = Image.new("L", (w, h), 0)
     alpha.putdata([255 if v else 0 for v in fg])
