@@ -85,7 +85,12 @@ async function main(): Promise<void> {
   app.ticker.add((ticker) => {
     const realDt = Math.min(0.1, ticker.deltaMS / 1000)
     elapsed += realDt
-    sim.advance(realDt, { ...kb.intent(), interact: kb.consumeInteract(), craft: kb.consumeCraft() })
+    sim.advance(realDt, {
+      ...kb.intent(),
+      interact: kb.interactHeld() || kb.consumeInteract(), // held 连砍 + 边沿缓存点按
+      craft: kb.consumeCraft(),
+      aimFacing: kb.aimFacing(window.innerWidth), // 角色恒居屏幕中心,屏幕中线即角色位置
+    })
     const alphaV = sim.alpha()
     const st = sim.state
 
