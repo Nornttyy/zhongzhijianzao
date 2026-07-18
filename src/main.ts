@@ -71,9 +71,11 @@ async function main(): Promise<void> {
   app.stage.addChild(ui.container)
   ui.onMove = (from, to) => sim.queueAction({ type: 'move', from, to })
   ui.onCraft = (recipe) => sim.queueAction({ type: 'craft', recipe })
+  ui.container.visible = false // HUD 待开始游戏后再现
   const menu = new Menu({
     onStart() {
       sfx.unlock() // 开始按钮点击即用户手势,音频体面解锁
+      ui.container.visible = true
       kb.clear(); sim.clearPendingEdges()
       ui.toast('夜很深，跟随微光。')
       ui.toast('WASD 移动 · 左键 采集 · E 背包')
