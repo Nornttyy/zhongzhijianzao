@@ -1,5 +1,5 @@
 import { CONFIG } from '../config'
-import { addItem } from './inventory'
+import { addItem, takeAt } from './inventory'
 import { stepPhantom } from './phantom'
 import { stepPlayer } from './player'
 import { nextRand } from './rand'
@@ -21,6 +21,23 @@ export function nearestNodeIdx(nodes: readonly ResourceNode[], pos: Vec2, rangeM
 }
 
 export const selectedKind = (w: WorldState): ItemKind | null => w.slots[w.selected]?.kind ?? null
+
+const PLACEABLE = new Set<ItemKind>(['sapling', 'lanternPost'])
+
+/** 放置校验：玩家白圈内（rangeM）、界内（edgeMargin）、与既有实体间距 ≥ spacingM */
+export function canPlaceAt(world: WorldState, playerPos: Vec2, aim: Vec2): boolean {
+  const P = CONFIG.place
+  if (dist(playerPos, aim) > P.rangeM) return false
+  if (aim.x < P.edgeMarginM || aim.x > CONFIG.world.width - P.edgeMarginM
+    || aim.y < P.edgeMarginM || aim.y > CONFIG.world.height - P.edgeMarginM) return false
+  const others: Vec2[] = [
+    CONFIG.campfire,
+    ...world.nodes.map((n) => n.pos),
+    ...world.posts,
+    ...world.plantings.map((p) => p.pos),
+  ]
+  return others.every((o) => dist(o, aim) >= P.spacingM)
+}
 
 /** 安宁值每秒变化率：档位互斥取最高，注视为叠加项 */
 export function serenityRate(inZone: boolean, hasLantern: boolean, staring: boolean): number {
@@ -112,6 +129,40 @@ export function stepWorld(s: SimState, input: IntentInput, dt: number): { state:
       remain.push({ ...d, pos, vel })
     }
     world = { ...world, drops: remain, slots, invFullAt }
+  }
+
+  // 右键放置（树苗/提灯柱通用）
+  if (input.place) {
+    const kind = selectedKind(world)
+    if (kind && PLACEABLE.has(kind) && canPlaceAt(world, player.pos, input.aim)) {
+      const taken = takeAt(world.slots, world.selected, 1)
+      if (taken.taken === 1) {
+        if (kind === 'sapling') {
+          const p = { id: world.nextId, pos: input.aim, plantedAt: s.time }
+          world = { ...world, slots: taken.slots, plantings: [...world.plantings, p], nextId: world.nextId + 1 }
+          events.push({ type: 'planted', pos: input.aim })
+        } else {
+          const posts = [...world.posts, input.aim]
+          world = { ...world, slots: taken.slots, posts }
+          events.push({ type: 'postPlaced', pos: input.aim, index: posts.length - 1 })
+        }
+      }
+    }
+  }
+
+  // 种植生长：到时转化为小树（tier0）
+  if (world.plantings.length) {
+    const ready = world.plantings.filter((p) => s.time - p.plantedAt >= CONFIG.growth.durS)
+    if (ready.length) {
+      let nodes = world.nodes
+      let nextId = world.nextId
+      for (const p of ready) {
+        const node = { id: nextId++, kind: 'tree' as const, tier: 0, pos: p.pos, charges: CONFIG.tiers.tree[0]!.charges }
+        nodes = [...nodes, node]
+        events.push({ type: 'grown', pos: p.pos, nodeId: node.id })
+      }
+      world = { ...world, nodes, plantings: world.plantings.filter((p) => !ready.includes(p)), nextId }
+    }
   }
 
   // 幻影
