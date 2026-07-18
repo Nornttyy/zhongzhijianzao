@@ -9,8 +9,12 @@ export class Keyboard {
   private keys = new Set<string>()
   private interactPressed = false
   private interactHeldState = false
-  private craftPressed = false
+  private placePressed = false
+  private bagPressed = false
+  private selectPressed = -1
+  private wheelAcc = 0
   private lastPointerX: number | null = null
+  readonly mouse = { x: 0, y: 0 }
   private unlocked = false
   onFirstInput?: () => void
 
@@ -22,19 +26,28 @@ export class Keyboard {
       unlock()
       if (e.repeat) return
       this.keys.add(e.code)
-      if (e.code === 'KeyE') this.craftPressed = true // 合成/放置边沿
+      if (e.code === 'KeyE') this.bagPressed = true // 背包开关边沿
+      if (e.code.startsWith('Digit')) {
+        const n = Number(e.code.slice(5))
+        if (n >= 1 && n <= 9) this.selectPressed = n - 1
+      }
     })
     target.addEventListener('keyup', (e) => this.keys.delete(e.code))
-    // 采集 = 鼠标左键（切片A §4.5 修订）；held 供长按连砍，lastPointerX 供挥砍侧位
+    // 采集 = 左键（held 供长按连砍）；放置 = 右键；lastPointerX 供挥砍侧位
     target.addEventListener('pointerdown', (e) => {
       unlock()
-      if (typeof e.clientX === 'number') this.lastPointerX = e.clientX
+      if (typeof e.clientX === 'number') { this.lastPointerX = e.clientX; this.mouse.x = e.clientX; this.mouse.y = e.clientY }
       if (e.button === 0) { this.interactPressed = true; this.interactHeldState = true }
+      if (e.button === 2) this.placePressed = true
     })
     target.addEventListener('pointerup', (e) => {
       if (e.button === 0) this.interactHeldState = false
     })
-    target.addEventListener('pointermove', (e) => { if (typeof e.clientX === 'number') this.lastPointerX = e.clientX })
+    target.addEventListener('pointermove', (e) => {
+      if (typeof e.clientX === 'number') { this.lastPointerX = e.clientX; this.mouse.x = e.clientX; this.mouse.y = e.clientY }
+    })
+    target.addEventListener('wheel', (e) => { this.wheelAcc += e.deltaY })
+    target.addEventListener('contextmenu', (e) => e.preventDefault()) // 右键放置，屏蔽系统菜单
     target.addEventListener('blur', () => this.clear())
   }
 
@@ -51,7 +64,10 @@ export class Keyboard {
     this.keys.clear()
     this.interactPressed = false
     this.interactHeldState = false
-    this.craftPressed = false
+    this.placePressed = false
+    this.bagPressed = false
+    this.selectPressed = -1
+    this.wheelAcc = 0
   }
 
   interactHeld(): boolean { return this.interactHeldState }
@@ -62,9 +78,29 @@ export class Keyboard {
     return this.lastPointerX < viewportWidth / 2 ? -1 : 1
   }
 
-  consumeCraft(): boolean {
-    const v = this.craftPressed
-    this.craftPressed = false
+  consumePlace(): boolean {
+    const v = this.placePressed
+    this.placePressed = false
+    return v
+  }
+
+  consumeBagToggle(): boolean {
+    const v = this.bagPressed
+    this.bagPressed = false
+    return v
+  }
+
+  /** 数字键选格（1→0 … 9→8），无为 -1 */
+  consumeSelect(): number {
+    const v = this.selectPressed
+    this.selectPressed = -1
+    return v
+  }
+
+  /** 滚轮方向：-1/0/1（消费清零） */
+  consumeWheel(): number {
+    const v = Math.sign(this.wheelAcc)
+    this.wheelAcc = 0
     return v
   }
 }

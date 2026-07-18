@@ -153,17 +153,48 @@ describe('Keyboard 交互锁存', () => {
     expect(kb.consumeInteract()).toBe(false)
   })
 
-  it('KeyE 锁存 craft 边沿，消费一次后清空', () => {
+  it('KeyE 锁存背包开关边沿，消费一次后清空；blur 清除', () => {
     const { target, kb } = attach()
     dispatchKeydown(target, 'KeyE')
-    expect(kb.consumeCraft()).toBe(true)
-    expect(kb.consumeCraft()).toBe(false)
-  })
-
-  it('blur 清除未消费的 craft 锁存', () => {
-    const { target, kb } = attach()
+    expect(kb.consumeBagToggle()).toBe(true)
+    expect(kb.consumeBagToggle()).toBe(false)
     dispatchKeydown(target, 'KeyE')
     target.dispatchEvent(new Event('blur'))
-    expect(kb.consumeCraft()).toBe(false)
+    expect(kb.consumeBagToggle()).toBe(false)
+  })
+
+  it('右键锁存 place 边沿，blur 清除', () => {
+    const { target, kb } = attach()
+    dispatchPointer(target, 2)
+    expect(kb.consumePlace()).toBe(true)
+    expect(kb.consumePlace()).toBe(false)
+    dispatchPointer(target, 2)
+    target.dispatchEvent(new Event('blur'))
+    expect(kb.consumePlace()).toBe(false)
+  })
+
+  it('数字键选格 1→0、9→8，一次消费', () => {
+    const { target, kb } = attach()
+    dispatchKeydown(target, 'Digit3')
+    expect(kb.consumeSelect()).toBe(2)
+    expect(kb.consumeSelect()).toBe(-1)
+    dispatchKeydown(target, 'Digit9')
+    expect(kb.consumeSelect()).toBe(8)
+  })
+
+  it('滚轮给出符号并清零', () => {
+    const { target, kb } = attach()
+    const wheel = (deltaY: number) => target.dispatchEvent(Object.assign(new Event('wheel'), { deltaY }))
+    wheel(120)
+    expect(kb.consumeWheel()).toBe(1)
+    expect(kb.consumeWheel()).toBe(0)
+    wheel(-120)
+    expect(kb.consumeWheel()).toBe(-1)
+  })
+
+  it('鼠标位置实时可读', () => {
+    const { target, kb } = attach()
+    target.dispatchEvent(Object.assign(new Event('pointermove'), { clientX: 333, clientY: 222 }))
+    expect(kb.mouse).toEqual({ x: 333, y: 222 })
   })
 })
