@@ -1,19 +1,18 @@
 import { describe, expect, it } from 'vitest'
 import { deriveHint } from '../src/render/hints'
 import { initialSim } from '../src/sim/types'
-import type { SimState } from '../src/sim/types'
+import type { ItemStack, SimState } from '../src/sim/types'
 
-const withWorld = (s: SimState, w: Partial<SimState['world']>): SimState => ({ ...s, world: { ...s.world, ...w } })
+const withSel = (s: SimState, stack: ItemStack | null): SimState =>
+  ({ ...s, world: { ...s.world, slots: s.world.slots.map((x, i) => (i === 0 ? stack : x)), selected: 0 } })
 
-describe('deriveHint 优先级', () => {
-  it('放置 > 可合成 > 篝火进度 > 采集 > 无', () => {
-    const atFire = initialSim(20, 20.8)
-    expect(deriveHint(withWorld(atFire, { placing: true }))).toBe('E 放置提灯柱')
-    expect(deriveHint(withWorld(atFire, { inventory: { wood: 10, fluorite: 5 } })))
-      .toBe('E 合成 提灯柱（木10 萤5）')
-    expect(deriveHint(atFire)).toBe('篝火 · 提灯柱需要 木0/10 萤0/5')
+describe('deriveHint', () => {
+  it('放置物 > 斧头采集 > 无', () => {
+    expect(deriveHint(withSel(initialSim(5, 5), { kind: 'lanternPost', count: 1 }))).toBe('右键 放置（圈内）')
+    expect(deriveHint(withSel(initialSim(5, 5), { kind: 'sapling', count: 1 }))).toBe('右键 放置（圈内）')
     expect(deriveHint(initialSim(12.5, 14.1))).toBe('左键 采集低语木')
     expect(deriveHint(initialSim(7.5, 17.6))).toBe('左键 采集萤石')
+    expect(deriveHint(withSel(initialSim(12.5, 14.1), null))).toBeNull() // 空手不提示采集
     expect(deriveHint(initialSim(5, 5))).toBeNull()
   })
 })

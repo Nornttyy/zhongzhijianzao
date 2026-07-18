@@ -1,7 +1,6 @@
 import { Container, Sprite, type Texture } from 'pixi.js'
 import { CONFIG } from '../config'
 import { lerp } from '../sim/vec'
-import { previewPos } from '../sim/world'
 import { makeRadialTexture } from './lightLayer'
 import type { SimState } from '../sim/types'
 import type { GameTextures } from './textures'
@@ -23,13 +22,13 @@ export class WorldView {
   private postSprites: Sprite[] = []
   private flame: Sprite
   private phantom: Sprite
-  private preview: Sprite
   private shakes = new Map<number, number>()
   private glowTex = makeRadialTexture()
 
   constructor(private world: Container, overlay: Container, private tex: GameTextures, initial: SimState) {
     for (const n of initial.world.nodes) {
-      const s = footSprite(n.kind === 'tree' ? tex.tree : tex.ore, n.kind === 'tree' ? CONFIG.sizes.treeH : CONFIG.sizes.oreH)
+      const s = footSprite(n.kind === 'tree' ? tex.tree : tex.ore,
+        n.kind === 'tree' ? CONFIG.tiers.tree[n.tier]!.heightM : CONFIG.tiers.ore[n.tier]!.heightM)
       s.position.set(n.pos.x * px, n.pos.y * px)
       s.zIndex = n.pos.y * px
       this.nodeSprites.set(n.id, s)
@@ -49,11 +48,6 @@ export class WorldView {
     this.flame.position.set(CONFIG.campfire.x * px, (CONFIG.campfire.y - 0.55) * px)
     this.flame.zIndex = CONFIG.campfire.y * px + 1
     world.addChild(this.flame)
-
-    this.preview = footSprite(tex.post, CONFIG.sizes.postH)
-    this.preview.alpha = 0.45
-    this.preview.visible = false
-    world.addChild(this.preview)
 
     // 幻影：暗幕之上的屏幕层（自发光体不受暗幕遮蔽，远处黑暗中可见）
     this.phantom = footSprite(tex.phantom, CONFIG.sizes.phantomH)
@@ -105,14 +99,6 @@ export class WorldView {
     const f = 1 + 0.18 * 0.5 * (Math.sin(timeS * 7.3) + Math.sin(timeS * 12.1))
     this.flame.scale.set((1.1 * px * 2 * f) / 512)
     this.flame.alpha = 0.6 + 0.1 * Math.sin(timeS * 9.1)
-    // 放置预览
-    this.preview.visible = cur.world.placing
-    if (cur.world.placing) {
-      const p = previewPos(cur.player)
-      this.preview.position.set(p.x * px, p.y * px)
-      this.preview.zIndex = p.y * px
-      this.preview.alpha = 0.35 + 0.12 * Math.sin(timeS * 5)
-    }
     // 幻影：世界坐标经 world 容器原点换算到屏幕层；跨重生不插值（瞬移）
     const pp = prev.world.phantom
     const cp = cur.world.phantom

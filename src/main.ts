@@ -14,6 +14,7 @@ import { Sfx } from './audio/sfx'
 import { Handmade, makeDisplacementTexture } from './render/handmade'
 import { Menu } from './ui/menu'
 import { Sim } from './sim/sim'
+import { countOf } from './sim/inventory'
 import { initialSim, type SimState } from './sim/types'
 import { dist, lerp } from './sim/vec'
 
@@ -125,7 +126,7 @@ async function main(): Promise<void> {
       sim.advance(realDt, {
         ...kb.intent(),
         interact: kb.interactHeld() || kb.consumeInteract(), // held 连砍 + 边沿缓存点按
-        craft: kb.consumeCraft(),
+        place: false, aim: { x: 0, y: 0 }, selectSlot: -1, // 过渡：Task 5/6 接鼠标与热键输入
         aimFacing: kb.aimFacing(window.innerWidth), // 角色恒居屏幕中心,屏幕中线即角色位置
       })
     }
@@ -134,14 +135,18 @@ async function main(): Promise<void> {
 
     for (const e of sim.drainEvents()) {
       switch (e.type) {
-        case 'harvest':
-          worldView.shake(e.nodeId)
-          if (e.depleted) lightsDirty = true // 微光熄灭
+        case 'nodeHit': worldView.shake(e.nodeId); sfx.knock(); break
+        case 'nodeBroken':
+          lightsDirty = true // 微光熄灭
           if (e.kind === 'tree') { particles.firefly(e.pos.x, e.pos.y - 1.2); sfx.pickupWood() }
           else { particles.glint(e.pos.x, e.pos.y - 0.5); sfx.pickupOre() }
           break
+        case 'pickup': particles.glint(e.pos.x, e.pos.y - 0.3); sfx.pickupWood(); break
+        case 'invFull': ui.toast('背包满了'); break
+        case 'planted': break
+        case 'grown': lightsDirty = true; break
         case 'phantomSigh': sfx.sigh(); break
-        case 'crafted': sfx.chime(); ui.toast('合成完成——E 放下提灯柱'); break
+        case 'crafted': sfx.chime(); ui.toast(`合成：${CONFIG.recipes[e.recipe]!.name}`); break
         case 'postPlaced':
           sfx.placeThump()
           lightsDirty = true
@@ -191,7 +196,7 @@ async function main(): Promise<void> {
       ? 1 - Math.min(1, Math.max(0, (dPh - P.dissolveRange) / (P.stareExit - P.dissolveRange)))
       : 0)
     // HUD 与迷失表现
-    ui.setCounts(st.world.inventory.wood, st.world.inventory.fluorite)
+    ui.setCounts(countOf(st.world.slots, 'wood'), countOf(st.world.slots, 'fluorite'))
     ui.setSerenity(st.world.serenity)
     ui.setHint(deriveHint(st))
     ui.update(realDt, elapsed)

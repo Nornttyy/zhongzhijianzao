@@ -28,17 +28,36 @@ export const CONFIG = {
     fadeDur: 1.2, goneDur: 6, fadeInDur: 1, respawnMinDist: 12,
     ringMin: 10, ringMax: 18, spawn: { x: 32, y: 32 },
   },
-  craft: { rangeM: 2.5, wood: 10, fluorite: 5, placeAheadM: 1.5, edgeMarginM: 1 },
   campfire: { x: 20, y: 19 },
-  nodes: {
-    treeCharges: 4, oreCharges: 5,
-    trees: [
-      { x: 12.5, y: 13 }, { x: 27, y: 11.5 }, { x: 31.5, y: 22 },
-      { x: 9, y: 25.5 }, { x: 15.5, y: 31 }, { x: 25.5, y: 29.5 },
+  inv: { slots: 36, hotbar: 9, stackMax: 99 },
+  drops: { pickupRadiusM: 1.0, pickupDelayS: 0.5, scatterMin: 1.5, scatterMax: 3, dragPerS: 6, itemH: 0.45 },
+  place: { rangeM: 3, spacingM: 0.8, edgeMarginM: 1 },
+  growth: { durS: 90 },
+  hp: { max: 100, campfireRegen: 10 },
+  saplingChance: 0.35,
+  recipes: [
+    { name: '提灯柱', out: 'lanternPost', outCount: 1, cost: [{ kind: 'wood', count: 10 }, { kind: 'fluorite', count: 5 }] },
+  ],
+  tiers: {
+    tree: [
+      { charges: 3, drop: 2, heightM: 2.4, glow: 0.7, saplingRolls: 1 },
+      { charges: 4, drop: 4, heightM: 3.2, glow: 1.0, saplingRolls: 1 },
+      { charges: 5, drop: 6, heightM: 4.2, glow: 1.3, saplingRolls: 2 },
     ],
-    ores: [{ x: 7.5, y: 16.5 }, { x: 33, y: 15.5 }, { x: 21.5, y: 34.5 }],
+    ore: [
+      { charges: 3, drop: 2, heightM: 0.9, glow: 0.85 },
+      { charges: 5, drop: 5, heightM: 1.4, glow: 1.15 },
+    ],
   },
-  sizes: { treeH: 3.2, oreH: 1.1, campfireH: 1.3, postH: 2.2, phantomH: 1.8 }, // 米
+  corpse: { treeFallS: 0.8, treeFadeS: 1.5, oreCrushS: 0.5, oreFadeS: 1.2 },
+  nodes: {
+    trees: [
+      { x: 12.5, y: 13, tier: 1 }, { x: 27, y: 11.5, tier: 0 }, { x: 31.5, y: 22, tier: 2 },
+      { x: 9, y: 25.5, tier: 0 }, { x: 15.5, y: 31, tier: 1 }, { x: 25.5, y: 29.5, tier: 2 },
+    ],
+    ores: [{ x: 7.5, y: 16.5, tier: 0 }, { x: 33, y: 15.5, tier: 1 }, { x: 21.5, y: 34.5, tier: 0 }],
+  },
+  sizes: { campfireH: 1.3, postH: 2.2, phantomH: 1.8 }, // 米（树/矿高度见 tiers）
   handmade: {
     paperSeed: 20260718, paperAlpha: 0.22,
     grainAlpha: 0.12, grainFrames: 4, grainFps: 9,

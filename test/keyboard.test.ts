@@ -15,7 +15,7 @@ describe('intentFromKeys', () => {
 })
 
 describe('Sim 固定步长', () => {
-  const input = { moveX: 1, moveY: 0, interact: false, craft: false, aimFacing: 0 as const }
+  const input = { moveX: 1, moveY: 0, interact: false, place: false, aim: { x: 0, y: 0 }, selectSlot: -1, aimFacing: 0 as const }
   it('累积 realDt 按 1/30 整步执行，余量留在 alpha', () => {
     const sim = new Sim(initialSim(20, 20))
     sim.advance(0.05, input) // 1 步 + 余 0.0167
@@ -36,21 +36,21 @@ describe('Sim 固定步长', () => {
   })
   it('interact 边沿只投递给首个 sim 步', () => {
     const sim = new Sim(initialSim(20, 20))
-    sim.advance(3 / 30, { moveX: 1, moveY: 0, interact: true, craft: false, aimFacing: 0 as const })
+    sim.advance(3 / 30, { moveX: 1, moveY: 0, interact: true, place: false, aim: { x: 0, y: 0 }, selectSlot: -1, aimFacing: 0 as const })
     // 第1步边沿进入采集，第2步移动取消采集回到行走，
     // 第3步若边沿泄漏到后续步会再次进入采集——期望仍为行走
     expect(sim.state.player.action).toBe('walking')
   })
   it('无步帧消费的 interact 边沿被缓存到下一次实际步进', () => {
     const sim = new Sim(initialSim(20, 20))
-    sim.advance(0.01, { moveX: 0, moveY: 0, interact: true, craft: false, aimFacing: 0 as const }) // 累积不足一步
+    sim.advance(0.01, { moveX: 0, moveY: 0, interact: true, place: false, aim: { x: 0, y: 0 }, selectSlot: -1, aimFacing: 0 as const }) // 累积不足一步
     expect(sim.state.player.action).toBe('idle')
-    sim.advance(0.03, { moveX: 0, moveY: 0, interact: false, craft: false, aimFacing: 0 as const }) // 此帧才步进
+    sim.advance(0.03, { moveX: 0, moveY: 0, interact: false, place: false, aim: { x: 0, y: 0 }, selectSlot: -1, aimFacing: 0 as const }) // 此帧才步进
     expect(sim.state.player.gathering).toBe(true) // 点按边沿被缓存,起手一个完整循环
   })
   it('循环中点按排队到边界续一循环（连点不吞刀）', () => {
     const sim = new Sim(initialSim(20, 20))
-    const off = { moveX: 0, moveY: 0, interact: false, craft: false, aimFacing: 0 } as const
+    const off = { moveX: 0, moveY: 0, interact: false, place: false, aim: { x: 0, y: 0 }, selectSlot: -1, aimFacing: 0 } as const
     const tap = { ...off, interact: true }
     sim.advance(1 / 30, tap)           // 点按1:起手
     sim.advance(1 / 30, off)
@@ -65,7 +65,7 @@ describe('Sim 固定步长', () => {
 
   it('held 跨多步批次在循环边界无缝衔接', () => {
     const sim = new Sim(initialSim(20, 20))
-    const held = { moveX: 0, moveY: 0, interact: true, craft: false, aimFacing: 0 as const } as const
+    const held = { moveX: 0, moveY: 0, interact: true, place: false, aim: { x: 0, y: 0 }, selectSlot: -1, aimFacing: 0 as const } as const
     sim.advance(1 / 30, held) // 起手
     for (let i = 0; i < 7; i++) sim.advance(0.2, held) // 1.4s+,循环边界必落在某批次中段
     expect(sim.state.player.gathering).toBe(true)
@@ -73,9 +73,9 @@ describe('Sim 固定步长', () => {
   })
   it('clearPendingEdges 丢弃已缓存未步进的边沿（blur 场景）', () => {
     const sim = new Sim(initialSim(20, 20))
-    sim.advance(0.01, { moveX: 0, moveY: 0, interact: true, craft: true, aimFacing: 0 as const }) // 缓存但未步进
+    sim.advance(0.01, { moveX: 0, moveY: 0, interact: true, place: true, aim: { x: 0, y: 0 }, selectSlot: -1, aimFacing: 0 as const }) // 缓存但未步进
     sim.clearPendingEdges() // 失焦：陈旧边沿不得在回焦后触发
-    sim.advance(0.03, { moveX: 0, moveY: 0, interact: false, craft: false, aimFacing: 0 as const })
+    sim.advance(0.03, { moveX: 0, moveY: 0, interact: false, place: false, aim: { x: 0, y: 0 }, selectSlot: -1, aimFacing: 0 as const })
     expect(sim.state.player.gathering).toBe(false)
     expect(sim.state.player.action).toBe('idle')
   })

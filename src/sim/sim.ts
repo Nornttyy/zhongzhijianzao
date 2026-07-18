@@ -8,7 +8,7 @@ export class Sim {
   prev: SimState
   private acc = 0
   private pendingInteract = false
-  private pendingCraft = false
+  private pendingPlace = false
   private events: SimEvent[] = []
 
   constructor(initial: SimState) {
@@ -24,7 +24,7 @@ export class Sim {
     // 纯 held 不重复入队,松开后不会靠陈旧缓存多砍一循环
     if (input.interact && !this.prevInteract) this.pendingInteract = true
     this.prevInteract = input.interact
-    if (input.craft) this.pendingCraft = true
+    if (input.place) this.pendingPlace = true
     let first = true
     while (this.acc >= this.dt) {
       this.acc -= this.dt
@@ -34,13 +34,13 @@ export class Sim {
       const inp = {
         ...input,
         interact: input.interact || (edgeUsable && this.pendingInteract),
-        craft: first ? this.pendingCraft : false, // craft 维持纯边沿
+        place: first ? this.pendingPlace : false, // 放置维持纯边沿
       }
       const r = stepWorld(this.state, inp, this.dt)
       this.state = r.state
       this.events.push(...r.events)
       if (edgeUsable) this.pendingInteract = false
-      if (first) { this.pendingCraft = false; first = false }
+      if (first) { this.pendingPlace = false; first = false }
     }
   }
 
@@ -49,7 +49,7 @@ export class Sim {
   /** 失焦时丢弃已缓存未步进的输入边沿，避免回焦后触发陈旧操作 */
   clearPendingEdges(): void {
     this.pendingInteract = false
-    this.pendingCraft = false
+    this.pendingPlace = false
   }
 
   /** 取走自上次 drain 以来聚合的 sim 事件 */

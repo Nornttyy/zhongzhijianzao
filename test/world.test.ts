@@ -3,10 +3,11 @@ import { CONFIG } from '../src/config'
 import { Sim } from '../src/sim/sim'
 import { initialSim } from '../src/sim/types'
 import { nearestNodeIdx, stepWorld } from '../src/sim/world'
-import type { IntentInput, SimEvent, SimState } from '../src/sim/types'
+import type { IntentInput, ItemKind, SimEvent, SimState } from '../src/sim/types'
 
 const DT = 1 / 30
-const I = (o: Partial<IntentInput> = {}): IntentInput => ({ moveX: 0, moveY: 0, interact: false, craft: false, aimFacing: 0 as const, ...o })
+const I = (o: Partial<IntentInput> = {}): IntentInput =>
+  ({ moveX: 0, moveY: 0, interact: false, place: false, aim: { x: 0, y: 0 }, selectSlot: -1, aimFacing: 0 as const, ...o })
 
 function runTicks(s: SimState, inp: IntentInput, n: number): { state: SimState; events: SimEvent[] } {
   const events: SimEvent[] = []
@@ -18,93 +19,104 @@ function runTicks(s: SimState, inp: IntentInput, n: number): { state: SimState; 
   return { state: s, events }
 }
 
-/** 一轮完整采集：首 tick interact，之后空输入直到循环结束 */
-function gatherOnce(s: SimState): { state: SimState; events: SimEvent[] } {
-  const first = stepWorld(s, I({ interact: true }), DT)
-  const rest = runTicks(first.state, I(), 45) // 1.5s > duration
-  return { state: rest.state, events: [...first.events, ...rest.events] }
+/** 一轮完整挥砍：首 tick interact 边沿，之后空输入直到循环结束 */
+function chop(s: SimState, n: number): { state: SimState; events: SimEvent[] } {
+  let events: SimEvent[] = []
+  for (let i = 0; i < n; i++) {
+    const first = stepWorld(s, I({ interact: true }), DT)
+    const rest = runTicks(first.state, I(), 45)
+    s = rest.state
+    events = [...events, ...first.events, ...rest.events]
+  }
+  return { state: s, events }
 }
+
+/** 0 号格换成指定物品（null=空手） */
+const withSel = (s: SimState, kind: ItemKind | null): SimState => ({
+  ...s,
+  world: { ...s.world, slots: s.world.slots.map((x, i) => (i === 0 ? (kind ? { kind, count: 1 } : null) : x)) },
+})
 
 describe('初始世界', () => {
   const w = initialSim(20, 20.8).world
-  it('6 树 4 次数、3 矿 5 次数，id 唯一', () => {
+  it('分档节点：2小2中2大树 + 2小1大矿，id 唯一，nextId=9', () => {
     const trees = w.nodes.filter((n) => n.kind === 'tree')
     const ores = w.nodes.filter((n) => n.kind === 'ore')
-    expect(trees).toHaveLength(6)
-    expect(ores).toHaveLength(3)
-    expect(trees.every((n) => n.charges === CONFIG.nodes.treeCharges)).toBe(true)
-    expect(ores.every((n) => n.charges === CONFIG.nodes.oreCharges)).toBe(true)
+    expect(trees.map((t) => t.tier).sort()).toEqual([0, 0, 1, 1, 2, 2])
+    expect(ores.map((t) => t.tier).sort()).toEqual([0, 0, 1])
+    expect(trees.every((n) => n.charges === CONFIG.tiers.tree[n.tier]!.charges)).toBe(true)
     expect(new Set(w.nodes.map((n) => n.id)).size).toBe(9)
+    expect(w.nextId).toBe(9)
   })
-  it('初值：安宁 100、背包空、无柱、不放置、幻影 wander', () => {
-    expect(w.serenity).toBe(CONFIG.serenity.initial)
-    expect(w.inventory).toEqual({ wood: 0, fluorite: 0 })
-    expect(w.posts).toEqual([])
-    expect(w.placing).toBe(false)
-    expect(w.phantom.mode).toBe('wander')
+  it('开局：斧头在 0 号并选中、hp 满、无掉落物无种植', () => {
+    expect(w.slots[0]).toEqual({ kind: 'axe', count: 1 })
+    expect(w.slots.filter(Boolean)).toHaveLength(1)
+    expect(w.selected).toBe(0)
+    expect(w.hp).toBe(CONFIG.hp.max)
+    expect(w.drops).toEqual([])
+    expect(w.plantings).toEqual([])
   })
 })
 
-describe('采集收益', () => {
-  // 树0 在 (12.5,13)；站它南侧 1.1m 处
+describe('命中与破坏（挖完才掉）', () => {
+  // 树0 在 (12.5,13)，中档 tier1：4 次
   const nearTree = () => initialSim(12.5, 14.1)
 
-  it('一轮采集：wood+1、charges-1、单次 harvest 事件', () => {
-    const { state, events } = gatherOnce(nearTree())
-    const h = events.filter((e) => e.type === 'harvest')
-    expect(h).toHaveLength(1)
-    expect(h[0]).toMatchObject({ kind: 'tree', nodeId: 0, depleted: false })
-    expect(state.world.inventory.wood).toBe(1)
-    expect(state.world.nodes[0]!.charges).toBe(CONFIG.nodes.treeCharges - 1)
+  it('一轮挥砍：nodeHit 一次、charges-1、不再有直接收益', () => {
+    const { state, events } = chop(nearTree(), 1)
+    expect(events.filter((e) => e.type === 'nodeHit')).toHaveLength(1)
+    expect(state.world.nodes[0]!.charges).toBe(CONFIG.tiers.tree[1]!.charges - 1)
+    expect(state.world.slots.filter(Boolean)).toHaveLength(1) // 只有斧头
   })
-  it('第 4 次采集 depleted=true，之后空挥无事件', () => {
-    let s = nearTree()
-    let all: SimEvent[] = []
-    for (let i = 0; i < 5; i++) { const r = gatherOnce(s); s = r.state; all = [...all, ...r.events] }
-    const h = all.filter((e) => e.type === 'harvest')
-    expect(h).toHaveLength(4)
-    expect(h[3]).toMatchObject({ depleted: true })
-    expect(s.world.nodes[0]!.charges).toBe(0)
-    expect(s.world.inventory.wood).toBe(4)
+  it('非斧头选中不结算', () => {
+    const { state, events } = chop(withSel(nearTree(), null), 1)
+    expect(events.filter((e) => e.type === 'nodeHit')).toHaveLength(0)
+    expect(state.world.nodes[0]!.charges).toBe(4)
   })
-  it('范围外空挥：无事件无扣减', () => {
-    const { state, events } = gatherOnce(initialSim(20, 25)) // 离所有节点都远
-    expect(events.filter((e) => e.type === 'harvest')).toHaveLength(0)
-    expect(state.world.inventory.wood).toBe(0)
+  it('第 4 轮破坏：节点移除 + nodeBroken(kind/tier)', () => {
+    const r3 = chop(nearTree(), 3)
+    const r4 = chop(r3.state, 1)
+    const broken = r4.events.filter((e) => e.type === 'nodeBroken')
+    expect(broken).toHaveLength(1)
+    expect(broken[0]).toMatchObject({ kind: 'tree', tier: 1, nodeId: 0 })
+    expect(r4.state.world.nodes.find((n) => n.id === 0)).toBeUndefined()
+    expect(r4.state.world.nodes).toHaveLength(8)
   })
-  it('边走边砍不打断：命中时刻仍在范围内则照常结算', () => {
-    const first = stepWorld(initialSim(12.5, 14.1), I({ interact: true }), DT)
-    // 按住并缓速移动,命中(0.45s)时仍在 1.6m 范围内
+  it('边走边砍不打断：命中时刻仍在范围内则照常结算（契约移植）', () => {
+    const first = stepWorld(nearTree(), I({ interact: true }), DT)
     const r = runTicks(first.state, I({ moveX: 1, interact: true }), 14)
-    expect(r.events.filter((e) => e.type === 'harvest')).toHaveLength(1)
+    expect(r.events.filter((e) => e.type === 'nodeHit')).toHaveLength(1)
   })
-  it('命中时刻已走出交互范围则无收益', () => {
-    const first = stepWorld(initialSim(12.5, 14.1), I({ interact: true }), DT)
-    // 全程按住移动:0.45s 命中前已离开范围(减速 2.4m/s × 0.43s ≈ 1.03m,起点距树需临界)——
-    // 用远离方向确保出界:向左上撤离
+  it('命中时刻已走出交互范围则无收益（契约移植）', () => {
+    const first = stepWorld(nearTree(), I({ interact: true }), DT)
     const r = runTicks(first.state, I({ moveX: -1, moveY: -1, interact: true }), 45)
-    const hits = r.events.filter((e) => e.type === 'harvest')
-    expect(hits.length).toBeLessThanOrEqual(1) // 首循环可能压线,后续循环必然出界
+    expect(r.events.filter((e) => e.type === 'nodeHit').length).toBeLessThanOrEqual(1)
     const r2 = runTicks(r.state, I({ moveX: -1, moveY: -1, interact: true }), 36)
-    expect(r2.events.filter((e) => e.type === 'harvest')).toHaveLength(0)
+    expect(r2.events.filter((e) => e.type === 'nodeHit')).toHaveLength(0)
   })
-  it('长按连砍:靠树按住两循环得两木', () => {
-    const first = stepWorld(initialSim(12.5, 14.1), I({ interact: true }), DT)
-    const r = runTicks(first.state, I({ interact: true }), 72) // 两循环
-    expect(r.events.filter((e) => e.type === 'harvest')).toHaveLength(2)
-    expect(r.state.world.inventory.wood).toBe(2)
+  it('长按连砍：两循环两次 nodeHit、charges-2（契约移植）', () => {
+    const first = stepWorld(nearTree(), I({ interact: true }), DT)
+    const r = runTicks(first.state, I({ interact: true }), 72)
+    expect(r.events.filter((e) => e.type === 'nodeHit')).toHaveLength(2)
+    expect(r.state.world.nodes[0]!.charges).toBe(2)
   })
-  it('矿采集得 fluorite', () => {
-    const { state, events } = gatherOnce(initialSim(7.5, 17.6)) // 矿0 (7.5,16.5) 南侧 1.1m
-    expect(events.filter((e) => e.type === 'harvest')[0]).toMatchObject({ kind: 'ore' })
-    expect(state.world.inventory.fluorite).toBe(1)
+  it('小矿三轮即破', () => {
+    const { state, events } = chop(initialSim(7.5, 17.6), 3) // 矿0 tier0：3 次
+    const broken = events.filter((e) => e.type === 'nodeBroken')
+    expect(broken).toHaveLength(1)
+    expect(broken[0]).toMatchObject({ kind: 'ore', tier: 0 })
+    expect(state.world.nodes.some((n) => n.kind === 'ore' && n.pos.x === 7.5)).toBe(false)
+  })
+  it('数字键选格立即生效', () => {
+    const r = stepWorld(initialSim(20, 20.8), I({ selectSlot: 4 }), DT)
+    expect(r.state.world.selected).toBe(4)
   })
   it('nearestNodeIdx 取最近未耗尽节点', () => {
     const w = initialSim(20, 20).world
     const nodes = [
-      { ...w.nodes[0]!, pos: { x: 20, y: 21.5 } },             // 1.5m
-      { ...w.nodes[1]!, pos: { x: 20, y: 21 } },               // 1.0m 更近
-      { ...w.nodes[2]!, pos: { x: 20, y: 20.5 }, charges: 0 }, // 最近但耗尽
+      { ...w.nodes[0]!, pos: { x: 20, y: 21.5 } },
+      { ...w.nodes[1]!, pos: { x: 20, y: 21 } },
+      { ...w.nodes[2]!, pos: { x: 20, y: 20.5 }, charges: 0 },
     ]
     expect(nearestNodeIdx(nodes, { x: 20, y: 20 }, 1.6)).toBe(1)
     expect(nearestNodeIdx(nodes, { x: 5, y: 5 }, 1.6)).toBe(-1)
@@ -117,7 +129,7 @@ describe('Sim 事件聚合', () => {
     sim.advance(DT, I({ interact: true }))
     for (let i = 0; i < 45; i++) sim.advance(DT, I())
     const drained = sim.drainEvents()
-    expect(drained.filter((e) => e.type === 'harvest')).toHaveLength(1)
+    expect(drained.filter((e) => e.type === 'nodeHit')).toHaveLength(1)
     expect(sim.drainEvents()).toHaveLength(0)
   })
 })
