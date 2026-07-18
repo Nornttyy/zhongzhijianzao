@@ -19,14 +19,19 @@ export class Sim {
     this.acc += Math.min(realDt, 0.25)
     if (input.interact) this.pendingInteract = true // 缓存边沿直到真正步进
     if (input.craft) this.pendingCraft = true
+    let first = true
     while (this.acc >= this.dt) {
       this.acc -= this.dt
       this.prev = this.state
-      const r = stepWorld(this.state, { ...input, interact: this.pendingInteract, craft: this.pendingCraft }, this.dt)
+      const inp = {
+        ...input,
+        interact: first ? this.pendingInteract : input.interact, // 首步吃边沿缓存(点按不丢),后续步吃原始 held(批内衔接)
+        craft: first ? this.pendingCraft : false,                // craft 维持纯边沿
+      }
+      const r = stepWorld(this.state, inp, this.dt)
       this.state = r.state
       this.events.push(...r.events)
-      this.pendingInteract = false // 只投递给第一个实际执行的步
-      this.pendingCraft = false
+      if (first) { this.pendingInteract = false; this.pendingCraft = false; first = false }
     }
   }
 

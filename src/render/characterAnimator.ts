@@ -5,6 +5,7 @@ const EPS = 1e-8 // 帧时间累积漂移容差：阈值跨越判定统一使用
 
 export interface AnimSample {
   action: PlayerAction
+  gathering: boolean
   fromAction: PlayerAction
   facing: 1 | -1
   actionT: number
@@ -31,6 +32,7 @@ export function animate(s: AnimSample): { transform: SpriteTransform; events: An
   const events: AnimEvent[] = []
   const t: SpriteTransform = { offsetXPx: 0, offsetYPx: 0, rotation: 0, ...breath(s.time) }
 
+  // 下半身：移动基态驱动颠簸与脚步（与采集正交，边走边砍脚步照响）
   if (s.action === 'walking') {
     const rate = CONFIG.player.speed / CONFIG.anim.strideM
     const phase = s.actionT * rate
@@ -38,7 +40,14 @@ export function animate(s: AnimSample): { transform: SpriteTransform; events: An
     t.offsetYPx = -CONFIG.anim.bobAmpPx * Math.abs(Math.sin(Math.PI * phase))
     t.rotation = CONFIG.anim.lean * s.facing
     if (Math.floor(phase + EPS) > Math.floor(prevPhase + EPS)) events.push('footstep')
-  } else if (s.action === 'gathering') {
+  } else if (s.fromAction === 'walking' && !s.gathering) {
+    // 停止回弹仅在"从行走停下"且未在采集时播放（动作文档 §4.2）
+    const k = Math.min(1, s.actionT / CONFIG.anim.stopRebound)
+    t.rotation = CONFIG.anim.lean * s.facing * (1 - k)
+  }
+
+  // 上半身：采集通道优先接管旋转（覆盖行走前倾/回弹）
+  if (s.gathering) {
     const g = CONFIG.gather
     let angle: number
     if (s.gatherT < g.windup) {
@@ -50,12 +59,6 @@ export function animate(s: AnimSample): { transform: SpriteTransform; events: An
     }
     t.rotation = angle * s.facing
     if (s.prevGatherT + EPS < g.hitAt && s.gatherT + EPS >= g.hitAt) events.push('gatherHit')
-  } else {
-    // 停止回弹仅在"从行走停下"时播放（动作文档 §4.2）；采集收尾已自然回正
-    if (s.fromAction === 'walking') {
-      const k = Math.min(1, s.actionT / CONFIG.anim.stopRebound)
-      t.rotation = CONFIG.anim.lean * s.facing * (1 - k)
-    }
   }
   return { transform: t, events }
 }

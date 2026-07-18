@@ -14,6 +14,7 @@ export class PlayerView {
   private baseScale: number
   private lastActionT = 0
   private lastGatherT = 0
+  private lastGathering = false
   private lastAction = 'idle'
 
   constructor(tex: Texture) {
@@ -26,16 +27,20 @@ export class PlayerView {
     const pp = prev.player
     const cp = cur.player
     const sameAction = pp.action === cp.action
-    // 跨动作切换时不插值计时器（动作文档 §5：跨帧判定基于同一动作内的区间）
+    // 跨动作切换时不插值计时器（动作文档 §5）；采集通道独立判定，
+    // 无缝衔接回绕（cur < prev）时不插值直接取 cur，避免倒放半循环
     const actionT = sameAction ? lerp(pp.actionT, cp.actionT, alphaV) : cp.actionT
-    const gatherT = sameAction ? lerp(pp.gatherT, cp.gatherT, alphaV) : cp.gatherT
+    const sameGather = pp.gathering === cp.gathering && cp.gatherT >= pp.gatherT
+    const gatherT = sameGather ? lerp(pp.gatherT, cp.gatherT, alphaV) : cp.gatherT
+    const gatherContinues = this.lastGathering && cp.gathering && gatherT >= this.lastGatherT
     const sample: AnimSample = {
-      action: cp.action, fromAction: cp.prevAction, facing: cp.facing,
+      action: cp.action, gathering: cp.gathering, fromAction: cp.prevAction, facing: cp.facing,
       actionT, prevActionT: this.lastAction === cp.action ? this.lastActionT : 0,
-      gatherT, prevGatherT: this.lastAction === cp.action ? this.lastGatherT : 0,
+      gatherT, prevGatherT: gatherContinues ? this.lastGatherT : 0,
       time: timeS,
     }
-    this.lastAction = cp.action; this.lastActionT = actionT; this.lastGatherT = gatherT
+    this.lastAction = cp.action; this.lastActionT = actionT
+    this.lastGathering = cp.gathering; this.lastGatherT = gatherT
 
     const { transform, events } = animate(sample)
     const px = CONFIG.pxPerMeter
