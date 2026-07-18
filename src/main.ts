@@ -42,12 +42,15 @@ async function main(): Promise<void> {
   const overlay = new Container() // 暗幕之上：幻影等自发光体
   app.stage.addChild(overlay)
   const worldView = new WorldView(scene.world, overlay, textures, sim.state)
+  document.addEventListener('visibilitychange', () => sfx.rearm())
+  window.addEventListener('pointerdown', () => sfx.rearm())
 
   const sinks = {
     footstep(xM: number, yM: number) { particles.dust(xM, yM); sfx.footstep() },
     gatherHit(xM: number, yM: number) { particles.spark(xM, yM); sfx.knock() },
   }
   let elapsed = 0
+  let emberT = 0
 
   app.ticker.add((ticker) => {
     const realDt = Math.min(0.1, ticker.deltaMS / 1000)
@@ -57,7 +60,18 @@ async function main(): Promise<void> {
     const st = sim.state
 
     for (const e of sim.drainEvents()) {
-      if (e.type === 'harvest') worldView.shake(e.nodeId)
+      switch (e.type) {
+        case 'harvest':
+          worldView.shake(e.nodeId)
+          if (e.kind === 'tree') { particles.firefly(e.pos.x, e.pos.y - 1.2); sfx.pickupWood() }
+          else { particles.glint(e.pos.x, e.pos.y - 0.5); sfx.pickupOre() }
+          break
+        case 'phantomSigh': sfx.sigh(); break
+        case 'crafted': sfx.chime(); break
+        case 'postPlaced': sfx.placeThump(); break
+        case 'lostEnter': sfx.setMuffled(true); break
+        case 'lostExit': sfx.setMuffled(false); break
+      }
     }
 
     player.update(sim.prev, st, alphaV, elapsed, sinks)
@@ -79,6 +93,20 @@ async function main(): Promise<void> {
         : { xM: n.pos.x, yM: n.pos.y - 1.6, radiusM: CONFIG.light.treeGlow.radiusM, alpha: CONFIG.light.treeGlow.alpha, flicker: 0.5 }),
     ]
     light.update(lights, scene.world.position, elapsed)
+
+    // 篝火火星
+    emberT -= realDt
+    if (emberT <= 0) {
+      emberT = 0.4 + Math.random() * 0.8
+      particles.ember(CONFIG.campfire.x + (Math.random() - 0.5) * 0.6, CONFIG.campfire.y - 0.6)
+    }
+    // 幻影注视低鸣：距离越近越响
+    const ph = st.world.phantom
+    const dPh = Math.hypot(ph.pos.x - ipx, ph.pos.y - ipy)
+    const P = CONFIG.phantom
+    sfx.humLevel(ph.mode === 'stare'
+      ? 1 - Math.min(1, Math.max(0, (dPh - P.dissolveRange) / (P.stareRange - P.dissolveRange)))
+      : 0)
   })
 }
 
