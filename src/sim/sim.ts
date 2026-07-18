@@ -32,6 +32,12 @@ export class Sim {
 
   alpha(): number { return this.acc / this.dt }
 
+  /** 失焦时丢弃已缓存未步进的输入边沿，避免回焦后触发陈旧操作 */
+  clearPendingEdges(): void {
+    this.pendingInteract = false
+    this.pendingCraft = false
+  }
+
   /** 取走自上次 drain 以来聚合的 sim 事件 */
   drainEvents(): SimEvent[] {
     const e = this.events

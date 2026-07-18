@@ -1,5 +1,6 @@
 import { Sprite, type Texture } from 'pixi.js'
 import { CONFIG } from '../config'
+import { lerp } from '../sim/vec'
 import type { SimState } from '../sim/types'
 import { animate, type AnimSample } from './characterAnimator'
 
@@ -7,8 +8,6 @@ export interface EventSinks {
   footstep(xM: number, yM: number): void
   gatherHit(xM: number, yM: number): void
 }
-
-const lerp = (a: number, b: number, k: number) => a + (b - a) * k
 
 export class PlayerView {
   readonly sprite: Sprite

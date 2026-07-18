@@ -47,6 +47,13 @@ describe('Sim 固定步长', () => {
     sim.advance(0.03, { moveX: 0, moveY: 0, interact: false, craft: false }) // 此帧才步进
     expect(sim.state.player.action).toBe('gathering')
   })
+  it('clearPendingEdges 丢弃已缓存未步进的边沿（blur 场景）', () => {
+    const sim = new Sim(initialSim(20, 20))
+    sim.advance(0.01, { moveX: 0, moveY: 0, interact: true, craft: true }) // 缓存但未步进
+    sim.clearPendingEdges() // 失焦：陈旧边沿不得在回焦后触发
+    sim.advance(0.03, { moveX: 0, moveY: 0, interact: false, craft: false })
+    expect(sim.state.player.action).toBe('idle')
+  })
 })
 
 describe('Keyboard 交互锁存', () => {

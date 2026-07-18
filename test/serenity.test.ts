@@ -49,6 +49,14 @@ describe('安宁值结算', () => {
     const { state } = run(s, 30)
     expect(state.world.serenity).toBeCloseTo(50 + S.lanternDrain + S.stareDrain, 2)
   })
+  it('注视掉率随 stare 模式滞回：8–9m 滞回带内仍持续掉', () => {
+    const s = withWorld(initialSim(5, 5), {
+      serenity: 50, // 幻影 8.5m：已进入 stare 后退到滞回带内
+      phantom: { pos: { x: 5, y: 13.5 }, mode: 'stare', modeT: 1, alpha: 1, target: { x: 5, y: 13.5 } },
+    })
+    const { state } = run(s, 30)
+    expect(state.world.serenity).toBeCloseTo(50 + S.lanternDrain + S.stareDrain, 2)
+  })
   it('夹紧 0 不为负', () => {
     const s = withWorld(initialSim(5, 5), { serenity: 0.01 })
     const { state } = run(s, 30)

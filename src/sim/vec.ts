@@ -2,6 +2,7 @@ import type { Vec2 } from './types'
 
 export const dist = (a: Vec2, b: Vec2): number => Math.hypot(a.x - b.x, a.y - b.y)
 export const clamp = (v: number, lo: number, hi: number): number => Math.min(hi, Math.max(lo, v))
+export const lerp = (a: number, b: number, k: number): number => a + (b - a) * k
 
 export function moveToward(from: Vec2, to: Vec2, step: number): Vec2 {
   const d = dist(from, to)

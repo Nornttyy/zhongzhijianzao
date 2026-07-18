@@ -3,7 +3,8 @@
 // 用法: node tools/e2e_probe.mjs <url> <截图目录>
 import { chromium } from 'playwright'
 
-const url = process.argv[2] ?? 'http://127.0.0.1:4179/'
+const rawUrl = process.argv[2] ?? 'http://127.0.0.1:4179/'
+const url = rawUrl + (rawUrl.includes('?') ? '&' : '?') + 'debug' // __whispers 句柄由 ?debug 门控
 const outDir = process.argv[3] ?? '/tmp'
 const browser = await chromium.launch({
   executablePath: '/root/.cache/ms-playwright/chromium_headless_shell-1223/chrome-linux/headless_shell',

@@ -1,12 +1,12 @@
 import { Container, Sprite, type Texture } from 'pixi.js'
 import { CONFIG } from '../config'
+import { lerp } from '../sim/vec'
 import { previewPos } from '../sim/world'
 import { makeRadialTexture } from './lightLayer'
 import type { SimState } from '../sim/types'
 import type { GameTextures } from './textures'
 
 const px = CONFIG.pxPerMeter
-const lerp = (a: number, b: number, k: number) => a + (b - a) * k
 const SHAKE_DUR = 0.3
 
 function footSprite(tex: Texture, heightM: number): Sprite {

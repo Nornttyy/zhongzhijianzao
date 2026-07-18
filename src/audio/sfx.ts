@@ -13,13 +13,15 @@ export class Sfx {
     this.ctx = ctx
     this.lp = ctx.createBiquadFilter()
     this.lp.type = 'lowpass'
-    this.lp.frequency.value = 18000
+    this.lp.frequency.value = CONFIG.lost.lowpassOpenHz
     const master = ctx.createGain()
     master.gain.value = 0.9
     master.connect(this.lp).connect(ctx.destination)
     this.out = master
     this.startWind(ctx, master)
     this.startHum(ctx, master)
+    // 部分浏览器（如 iOS Safari）键盘手势不授予音频激活，新建即 suspended
+    if (ctx.state === 'suspended') void ctx.resume()
   }
 
   /** 标签页隐藏/系统打断后被挂起的 context 重新拉起 */
@@ -28,7 +30,7 @@ export class Sfx {
   /** 迷失=true 时全局闷化 */
   setMuffled(on: boolean): void {
     if (!this.ctx || !this.lp) return
-    this.lp.frequency.setTargetAtTime(on ? CONFIG.lost.lowpassHz : 18000, this.ctx.currentTime, 0.25)
+    this.lp.frequency.setTargetAtTime(on ? CONFIG.lost.lowpassHz : CONFIG.lost.lowpassOpenHz, this.ctx.currentTime, 0.25)
   }
 
   /** 幻影注视强度 0..1 → 低鸣音量 */

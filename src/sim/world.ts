@@ -96,8 +96,8 @@ export function stepWorld(s: SimState, input: IntentInput, dt: number): { state:
   // 安宁值结算与迷失滞回（本切片玩家恒带提灯，黑暗档为完备性保留）
   const inZone = dist(CONFIG.campfire, player.pos) <= CONFIG.light.campfireRadiusM
     || world.posts.some((p) => dist(p, player.pos) <= CONFIG.light.postRadiusM)
+  // 注视掉率跟随 stare 模式本身的 8m 进/9m 出滞回，不再二次卡距离（终审#1：避免 8-9m 死区与边界拍抖）
   const staring = world.phantom.mode === 'stare'
-    && dist(world.phantom.pos, player.pos) <= CONFIG.phantom.stareRange
   const serenity = clamp(world.serenity + serenityRate(inZone, true, staring) * dt, 0, CONFIG.serenity.max)
   let lost = world.lost
   if (!lost && serenity < CONFIG.serenity.lostBelow) { lost = true; events.push({ type: 'lostEnter' }) }

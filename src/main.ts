@@ -12,7 +12,8 @@ import { loadTextures } from './render/textures'
 import { WorldView } from './render/worldView'
 import { Sfx } from './audio/sfx'
 import { Sim } from './sim/sim'
-import { initialSim } from './sim/types'
+import { initialSim, type SimState } from './sim/types'
+import { dist, lerp } from './sim/vec'
 
 // 不用顶层 await：打包后 pixi 核心并入本入口 chunk，app.init() 动态
 // import 的渲染器 chunk 又静态依赖入口——入口若停在顶层 await 上，
@@ -53,8 +54,11 @@ async function main(): Promise<void> {
   ui.toast('WASD 移动 · 左键 采集')
   document.addEventListener('visibilitychange', () => sfx.rearm())
   window.addEventListener('pointerdown', () => sfx.rearm())
-  // 无头探针的调试句柄（tools/e2e_probe.mjs 用于断言 sim 状态）
-  ;(window as unknown as { __whispers?: { sim: Sim } }).__whispers = { sim }
+  window.addEventListener('blur', () => sim.clearPendingEdges()) // 失焦丢弃陈旧输入边沿（与 Keyboard 的 blur 清理配套）
+  // 无头探针的调试句柄（tools/e2e_probe.mjs 用于断言 sim 状态）；?debug 门控，不暴露给普通玩家会话
+  if (new URLSearchParams(location.search).has('debug')) {
+    ;(window as unknown as { __whispers?: { sim: Sim } }).__whispers = { sim }
+  }
 
   const sinks = {
     footstep(xM: number, yM: number) { particles.dust(xM, yM); sfx.footstep() },
@@ -62,6 +66,21 @@ async function main(): Promise<void> {
   }
   let elapsed = 0
   let emberT = 0
+
+  // 灯表：0 号为随身提灯（每帧就地更新）；静态部分仅在耗尽/放置事件后重建。
+  // phase 为稳定呼吸相位种子，防止灯表增删时其余灯的呼吸跳变（终审#4）
+  const playerLight: LightSpec = { xM: 0, yM: 0, radiusM: CONFIG.light.lanternRadiusM, phase: 0 }
+  const allLights: LightSpec[] = [playerLight]
+  let lightsDirty = true
+  const staticLights = (st: SimState): LightSpec[] => [
+    { xM: CONFIG.campfire.x, yM: CONFIG.campfire.y - 0.5, radiusM: CONFIG.light.campfireRadiusM, flicker: 1.8, phase: 1 },
+    ...st.world.posts.map((p, i) => ({
+      xM: p.x, yM: p.y - CONFIG.sizes.postH * 0.82, radiusM: CONFIG.light.postRadiusM, phase: 2 + i,
+    })),
+    ...st.world.nodes.filter((n) => n.charges > 0).map((n) => n.kind === 'ore'
+      ? { xM: n.pos.x, yM: n.pos.y - 0.5, radiusM: CONFIG.light.oreGlow.radiusM, alpha: CONFIG.light.oreGlow.alpha, flicker: 0.5, phase: 10 + n.id }
+      : { xM: n.pos.x, yM: n.pos.y - 1.6, radiusM: CONFIG.light.treeGlow.radiusM, alpha: CONFIG.light.treeGlow.alpha, flicker: 0.5, phase: 10 + n.id }),
+  ]
 
   app.ticker.add((ticker) => {
     const realDt = Math.min(0.1, ticker.deltaMS / 1000)
@@ -74,6 +93,7 @@ async function main(): Promise<void> {
       switch (e.type) {
         case 'harvest':
           worldView.shake(e.nodeId)
+          if (e.depleted) lightsDirty = true // 微光熄灭
           if (e.kind === 'tree') { particles.firefly(e.pos.x, e.pos.y - 1.2); sfx.pickupWood() }
           else { particles.glint(e.pos.x, e.pos.y - 0.5); sfx.pickupOre() }
           break
@@ -81,6 +101,7 @@ async function main(): Promise<void> {
         case 'crafted': sfx.chime(); ui.toast('合成完成——E 放下提灯柱'); break
         case 'postPlaced':
           sfx.placeThump()
+          lightsDirty = true
           ui.toast(e.index === 0 ? '第一盏灯亮起，森林安静了些。' : '提灯柱已放置')
           break
         case 'lostEnter': sfx.setMuffled(true); break
@@ -93,20 +114,19 @@ async function main(): Promise<void> {
     // 相机与精灵使用同一插值位置，否则每个 sim tick 相机产生锯齿抖动
     const pp = sim.prev.player.pos
     const cp = st.player.pos
-    const ipx = pp.x + (cp.x - pp.x) * alphaV
-    const ipy = pp.y + (cp.y - pp.y) * alphaV
+    const ipx = lerp(pp.x, cp.x, alphaV)
+    const ipy = lerp(pp.y, cp.y, alphaV)
     scene.follow(ipx, ipy)
     worldView.update(sim.prev, st, alphaV, elapsed, realDt)
 
-    const lights: LightSpec[] = [
-      { xM: ipx, yM: ipy - CONFIG.player.heightM * 0.45, radiusM: CONFIG.light.lanternRadiusM },
-      { xM: CONFIG.campfire.x, yM: CONFIG.campfire.y - 0.5, radiusM: CONFIG.light.campfireRadiusM, flicker: 1.8 },
-      ...st.world.posts.map((p) => ({ xM: p.x, yM: p.y - 1.8, radiusM: CONFIG.light.postRadiusM })),
-      ...st.world.nodes.filter((n) => n.charges > 0).map((n) => n.kind === 'ore'
-        ? { xM: n.pos.x, yM: n.pos.y - 0.5, radiusM: CONFIG.light.oreGlow.radiusM, alpha: CONFIG.light.oreGlow.alpha, flicker: 0.5 }
-        : { xM: n.pos.x, yM: n.pos.y - 1.6, radiusM: CONFIG.light.treeGlow.radiusM, alpha: CONFIG.light.treeGlow.alpha, flicker: 0.5 }),
-    ]
-    light.update(lights, scene.world.position, elapsed)
+    if (lightsDirty) {
+      allLights.length = 1
+      allLights.push(...staticLights(st))
+      lightsDirty = false
+    }
+    playerLight.xM = ipx
+    playerLight.yM = ipy - CONFIG.player.heightM * 0.45
+    light.update(allLights, scene.world.position, elapsed)
 
     // 篝火火星
     emberT -= realDt
@@ -114,12 +134,12 @@ async function main(): Promise<void> {
       emberT = 0.4 + Math.random() * 0.8
       particles.ember(CONFIG.campfire.x + (Math.random() - 0.5) * 0.6, CONFIG.campfire.y - 0.6)
     }
-    // 幻影注视低鸣：距离越近越响
+    // 幻影注视低鸣：距离越近越响；映射到 stareExit（9m）与模式滞回一致，8-9m 带内不静默
     const ph = st.world.phantom
-    const dPh = Math.hypot(ph.pos.x - ipx, ph.pos.y - ipy)
+    const dPh = dist(ph.pos, { x: ipx, y: ipy })
     const P = CONFIG.phantom
     sfx.humLevel(ph.mode === 'stare'
-      ? 1 - Math.min(1, Math.max(0, (dPh - P.dissolveRange) / (P.stareRange - P.dissolveRange)))
+      ? 1 - Math.min(1, Math.max(0, (dPh - P.dissolveRange) / (P.stareExit - P.dissolveRange)))
       : 0)
     // HUD 与迷失表现
     ui.setCounts(st.world.inventory.wood, st.world.inventory.fluorite)
