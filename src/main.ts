@@ -53,6 +53,8 @@ async function main(): Promise<void> {
   ui.toast('WASD 移动 · 左键 采集')
   document.addEventListener('visibilitychange', () => sfx.rearm())
   window.addEventListener('pointerdown', () => sfx.rearm())
+  // 无头探针的调试句柄（tools/e2e_probe.mjs 用于断言 sim 状态）
+  ;(window as unknown as { __whispers?: { sim: Sim } }).__whispers = { sim }
 
   const sinks = {
     footstep(xM: number, yM: number) { particles.dust(xM, yM); sfx.footstep() },
