@@ -1,4 +1,4 @@
-// E2E 行为探针：驱动"走位→采集→合成→放置→迷失"全循环并断言 sim 状态。
+// E2E 行为探针：驱动"长按砍倒→扫拾掉落→合成→选格→右键放置→种树速生→血量→迷失往返"全循环并断言 sim 状态。
 // 仅本容器可跑（playwright 为环境工具，不入 package.json）。
 // 用法: node tools/e2e_probe.mjs <url> <截图目录>
 import { chromium } from 'playwright'
@@ -16,86 +16,165 @@ page.on('console', (m) => { if (m.type() === 'error') { errors++; console.log('[
 
 const state = () => page.evaluate(() => {
   const s = window.__whispers.sim.state
+  const count = (k) => s.world.slots.reduce((n, x) => n + (x && x.kind === k ? x.count : 0), 0)
   return {
-    pos: s.player.pos, wood: s.world.inventory.wood, fluorite: s.world.inventory.fluorite,
-    tree0: s.world.nodes[0].charges, posts: s.world.posts.length,
-    placing: s.world.placing, serenity: s.world.serenity, lost: s.world.lost,
-    phantomMode: s.world.phantom.mode,
+    pos: s.player.pos,
+    wood: count('wood'), fluorite: count('fluorite'), sapling: count('sapling'), post: count('lanternPost'),
+    slot0: s.world.slots[0], selected: s.world.selected,
+    nodes: s.world.nodes.length, drops: s.world.drops.length, plantings: s.world.plantings.length,
+    posts: s.world.posts.length, hp: s.world.hp, serenity: s.world.serenity, lost: s.world.lost,
   }
 })
 const shot = async (name) => { await page.screenshot({ path: `${outDir}/${name}.png` }); console.log('[shot]', name) }
 const assert = (cond, msg) => { if (!cond) { console.log('[FAIL]', msg); process.exitCode = 1 } else console.log('[ok]', msg) }
+/** 玩家恒居屏幕中心：世界坐标 → 屏幕像素 */
+const toScreen = async (xM, yM) => {
+  const p = await page.evaluate(() => window.__whispers.sim.state.player.pos)
+  return { x: 640 + (xM - p.x) * 48, y: 360 + (yM - p.y) * 48 }
+}
+/** 条件走位：朝方向键走直到谓词满足（首秒解码卡顿会吞帧，定时走位不可靠） */
+const walkUntil = async (keys, predSrc, maxIter = 40) => {
+  for (const k of keys) await page.keyboard.down(k)
+  for (let i = 0; i < maxIter; i++) {
+    await page.waitForTimeout(150)
+    if (await page.evaluate(predSrc)) break
+  }
+  for (const k of keys) await page.keyboard.up(k)
+  await page.waitForTimeout(250)
+}
 
 await page.goto(url, { waitUntil: 'networkidle' })
 await page.waitForTimeout(1500)
 await page.click('text=开始游戏') // 主菜单起手（点击手势顺带解锁音频）
 await page.waitForTimeout(1200)
 
-// 1) 出生态
+// 1) 出生态：斧头开局、满血、9 节点
 let s = await state()
-assert(s.wood === 0 && s.tree0 === 4 && s.posts === 0, `出生态 wood=0 tree0=4 posts=0 (${JSON.stringify(s)})`)
-assert(Math.abs(s.pos.x - 20) < 0.01 && Math.abs(s.pos.y - 20.8) < 0.01, `出生点 (20,20.8)`)
+assert(s.slot0 && s.slot0.kind === 'axe' && s.selected === 0, `开局斧头选中 (${JSON.stringify(s.slot0)})`)
+assert(s.nodes === 9 && s.drops === 0 && s.hp === 100, `出生态 nodes=9 drops=0 hp=100`)
 
-// 2) 走向树0 (12.5,13)：西北向 2.7s
-// 条件走位:边走边测距,到位即停(首秒解码卡顿会吞帧,定时走位不可靠)
-await page.keyboard.down('KeyW')
-await page.keyboard.down('KeyA')
-for (let i = 0; i < 40; i++) {
-  await page.waitForTimeout(150)
-  const d = await page.evaluate(() => {
-    const p = window.__whispers.sim.state.player.pos
-    return Math.hypot(p.x - 12.5, p.y - 13)
-  })
-  if (d < 1.3) break
-}
-await page.keyboard.up('KeyW')
-await page.keyboard.up('KeyA')
-await page.waitForTimeout(300)
+// 2) 走向树0（中档 12.5,13）
+await walkUntil(['KeyW', 'KeyA'], `(() => {
+  const p = window.__whispers.sim.state.player.pos
+  return Math.hypot(p.x - 12.5, p.y - 13) < 1.25
+})()`)
 s = await state()
-const dTree = Math.hypot(s.pos.x - 12.5, s.pos.y - 13)
-assert(dTree < 1.6, `走到树0 交互半径内 (dist=${dTree.toFixed(2)})`)
+assert(Math.hypot(s.pos.x - 12.5, s.pos.y - 13) < 1.6, `走到树0 交互半径内`)
 
-// 3) 采集 4 次采空树0（条件推进:等木头到账再点下一刀,防循环窗口吞点击）
-for (let i = 0; i < 4; i++) {
-  await page.mouse.click(640, 360)
-  for (let w = 0; w < 30; w++) {
-    await page.waitForTimeout(150)
-    const wood = await page.evaluate(() => window.__whispers.sim.state.world.inventory.wood)
-    if (wood >= i + 1) break
-  }
+// 3) 长按连砍采空树0（4 次），松开；断言节点破坏与掉落物产生
+await page.mouse.move(640, 300) // 指针置角色上方，挥砍朝向稳定
+await page.mouse.down()
+for (let i = 0; i < 50; i++) {
+  await page.waitForTimeout(200)
+  const gone = await page.evaluate(() => !window.__whispers.sim.state.world.nodes.some((n) => n.id === 0))
+  if (gone) break
 }
-await shot('e2e-1-tree-depleted')
+await page.mouse.up()
+await page.waitForTimeout(400)
+await shot('e2e-1-tree-broken')
 s = await state()
-assert(s.wood === 4, `采集 4 次得 4 木 (wood=${s.wood})`)
-assert(s.tree0 === 0, `树0 耗尽 (charges=${s.tree0})`)
+assert(s.nodes === 8, `树0 破坏节点移除 (nodes=${s.nodes})`)
+assert(s.wood + s.drops >= 4, `掉落产生（含树苗 roll） wood=${s.wood} drops=${s.drops}`)
 
-// 4) 注入资源，走回篝火合成（合成/放置走真实 E 键）
+// 4) 扫拾掉落：绕树位画个小圈
+await walkUntil(['KeyW'], `(() => window.__whispers.sim.state.world.drops.length === 0)()`, 10)
+await walkUntil(['KeyA'], `(() => window.__whispers.sim.state.world.drops.length === 0)()`, 6)
+await walkUntil(['KeyS'], `(() => window.__whispers.sim.state.world.drops.length === 0)()`, 8)
+await walkUntil(['KeyD'], `(() => window.__whispers.sim.state.world.drops.length === 0)()`, 8)
+s = await state()
+assert(s.wood >= 4, `掉落木材已拾取 (wood=${s.wood})`)
+
+// 5) 注入配方材料并经动作队列合成提灯柱
 await page.evaluate(() => {
   const sim = window.__whispers.sim
-  sim.state = { ...sim.state, world: { ...sim.state.world, inventory: { wood: 10, fluorite: 5 } } }
+  const slots = [...sim.state.world.slots]
+  slots[1] = { kind: 'wood', count: 10 }
+  slots[2] = { kind: 'fluorite', count: 5 }
+  sim.state = { ...sim.state, world: { ...sim.state.world, slots } }
+  sim.queueAction({ type: 'craft', recipe: 0 })
 })
-await page.keyboard.down('KeyS')
-await page.keyboard.down('KeyD')
-await page.waitForTimeout(2600)
-await page.keyboard.up('KeyS')
-await page.keyboard.up('KeyD')
 await page.waitForTimeout(300)
 s = await state()
-const dFire = Math.hypot(s.pos.x - 20, s.pos.y - 19)
-assert(dFire < 2.5, `回到篝火合成半径内 (dist=${dFire.toFixed(2)})`)
-await page.keyboard.press('KeyE')
+assert(s.post >= 1, `合成得提灯柱 (post=${s.post})`)
+
+// 6) 提灯柱移入热键 4 号格，数字键选中，右键在白圈内放置
+await page.evaluate(() => {
+  const sim = window.__whispers.sim
+  const idx = sim.state.world.slots.findIndex((x) => x && x.kind === 'lanternPost')
+  if (idx !== 3) sim.queueAction({ type: 'move', from: idx, to: 3 })
+})
+await page.waitForTimeout(200)
+await page.keyboard.press('Digit4')
+await page.waitForTimeout(200)
+s = await state()
+assert(s.selected === 3, `数字键选中 4 号格 (selected=${s.selected})`)
+const target = await page.evaluate(() => {
+  const p = window.__whispers.sim.state.player.pos
+  return { x: p.x + 1.6, y: p.y }
+})
+const scr = await toScreen(target.x, target.y)
+await page.mouse.move(scr.x, scr.y)
+await page.waitForTimeout(250)
+await shot('e2e-2-place-ghost')
+await page.mouse.click(scr.x, scr.y, { button: 'right' })
 await page.waitForTimeout(300)
 s = await state()
-assert(s.placing === true && s.wood === 0, `E 合成扣资源进放置 (placing=${s.placing} wood=${s.wood})`)
-await shot('e2e-2-placing-preview')
-await page.keyboard.press('KeyE')
-await page.waitForTimeout(300)
-s = await state()
-assert(s.posts === 1 && s.placing === false, `E 放置提灯柱落地 (posts=${s.posts})`)
-await page.waitForTimeout(700)
+assert(s.posts === 1, `右键放置提灯柱落地 (posts=${s.posts})`)
 await shot('e2e-3-post-placed')
 
-// 5) 注入低安宁值验证迷失表现
+// 7) 种树闭环：注入树苗→选中→右键种下→快进 90s→长成小树
+await page.evaluate(() => {
+  const sim = window.__whispers.sim
+  const slots = [...sim.state.world.slots]
+  slots[4] = { kind: 'sapling', count: 1 }
+  sim.state = { ...sim.state, world: { ...sim.state.world, slots } }
+})
+await page.keyboard.press('Digit5')
+await page.waitForTimeout(200)
+const t2 = await page.evaluate(() => {
+  const p = window.__whispers.sim.state.player.pos
+  return { x: p.x - 1.6, y: p.y + 0.6 }
+})
+const scr2 = await toScreen(t2.x, t2.y)
+await page.mouse.move(scr2.x, scr2.y)
+await page.mouse.click(scr2.x, scr2.y, { button: 'right' })
+await page.waitForTimeout(300)
+s = await state()
+assert(s.plantings === 1 && s.sapling === 0, `树苗种下 (plantings=${s.plantings})`)
+await page.evaluate(() => {
+  const sim = window.__whispers.sim
+  const w = sim.state.world
+  sim.state = {
+    ...sim.state,
+    world: { ...w, plantings: w.plantings.map((p) => ({ ...p, plantedAt: sim.state.time - 90 })) },
+  }
+})
+await page.waitForTimeout(400)
+s = await state()
+assert(s.plantings === 0 && s.nodes === 9, `90s 长成小树 (nodes=${s.nodes})`)
+await shot('e2e-4-sapling-grown')
+
+// 8) 背包面板开合冒烟
+await page.keyboard.press('KeyE')
+await page.waitForTimeout(300)
+await shot('e2e-5-bag-open')
+await page.keyboard.press('KeyE')
+await page.waitForTimeout(200)
+
+// 9) 血量：走回篝火圈，注入 40，回复上行
+await walkUntil(['KeyS', 'KeyD'], `(() => {
+  const p = window.__whispers.sim.state.player.pos
+  return Math.hypot(p.x - 20, p.y - 19) < 5
+})()`)
+await page.evaluate(() => {
+  const sim = window.__whispers.sim
+  sim.state = { ...sim.state, world: { ...sim.state.world, hp: 40 } }
+})
+await page.waitForTimeout(600)
+s = await state()
+assert(s.hp > 40 && s.hp <= 100, `篝火旁血量回复上行 (hp=${s.hp.toFixed(1)})`)
+
+// 10) 迷失往返（滤镜卸载/重挂路径）
 await page.evaluate(() => {
   const sim = window.__whispers.sim
   sim.state = { ...sim.state, world: { ...sim.state.world, serenity: 20 } }
@@ -103,10 +182,8 @@ await page.evaluate(() => {
 await page.waitForTimeout(400)
 s = await state()
 assert(s.lost === true, `安宁值 20 触发迷失 (lost=${s.lost})`)
-await page.waitForTimeout(1200)
-await shot('e2e-4-lost-vignette')
-
-// 6) 恢复路径:注入高安宁值退出迷失(滤镜卸载),再入迷失(滤镜重挂)——覆盖 lostExit 分支
+await page.waitForTimeout(1000)
+await shot('e2e-6-lost')
 await page.evaluate(() => {
   const sim = window.__whispers.sim
   sim.state = { ...sim.state, world: { ...sim.state.world, serenity: 100 } }
