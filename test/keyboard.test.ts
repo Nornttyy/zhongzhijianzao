@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { CONFIG } from '../src/config'
 import { intentFromKeys, Keyboard } from '../src/input/keyboard'
 import { Sim } from '../src/sim/sim'
 import { initialSim } from '../src/sim/types'
@@ -14,7 +15,7 @@ describe('intentFromKeys', () => {
 })
 
 describe('Sim 固定步长', () => {
-  const input = { moveX: 1, moveY: 0, interact: false, craft: false }
+  const input = { moveX: 1, moveY: 0, interact: false, craft: false, aimFacing: 0 as const }
   it('累积 realDt 按 1/30 整步执行，余量留在 alpha', () => {
     const sim = new Sim(initialSim(20, 20))
     sim.advance(0.05, input) // 1 步 + 余 0.0167
@@ -35,23 +36,32 @@ describe('Sim 固定步长', () => {
   })
   it('interact 边沿只投递给首个 sim 步', () => {
     const sim = new Sim(initialSim(20, 20))
-    sim.advance(3 / 30, { moveX: 1, moveY: 0, interact: true, craft: false })
+    sim.advance(3 / 30, { moveX: 1, moveY: 0, interact: true, craft: false, aimFacing: 0 as const })
     // 第1步边沿进入采集，第2步移动取消采集回到行走，
     // 第3步若边沿泄漏到后续步会再次进入采集——期望仍为行走
     expect(sim.state.player.action).toBe('walking')
   })
   it('无步帧消费的 interact 边沿被缓存到下一次实际步进', () => {
     const sim = new Sim(initialSim(20, 20))
-    sim.advance(0.01, { moveX: 0, moveY: 0, interact: true, craft: false }) // 累积不足一步
+    sim.advance(0.01, { moveX: 0, moveY: 0, interact: true, craft: false, aimFacing: 0 as const }) // 累积不足一步
     expect(sim.state.player.action).toBe('idle')
-    sim.advance(0.03, { moveX: 0, moveY: 0, interact: false, craft: false }) // 此帧才步进
-    expect(sim.state.player.action).toBe('gathering')
+    sim.advance(0.03, { moveX: 0, moveY: 0, interact: false, craft: false, aimFacing: 0 as const }) // 此帧才步进
+    expect(sim.state.player.gathering).toBe(true) // 点按边沿被缓存,起手一个完整循环
+  })
+  it('held 跨多步批次在循环边界无缝衔接', () => {
+    const sim = new Sim(initialSim(20, 20))
+    const held = { moveX: 0, moveY: 0, interact: true, craft: false, aimFacing: 0 as const } as const
+    sim.advance(1 / 30, held) // 起手
+    for (let i = 0; i < 7; i++) sim.advance(0.2, held) // 1.4s+,循环边界必落在某批次中段
+    expect(sim.state.player.gathering).toBe(true)
+    expect(sim.state.time).toBeGreaterThan(CONFIG.gather.duration)
   })
   it('clearPendingEdges 丢弃已缓存未步进的边沿（blur 场景）', () => {
     const sim = new Sim(initialSim(20, 20))
-    sim.advance(0.01, { moveX: 0, moveY: 0, interact: true, craft: true }) // 缓存但未步进
+    sim.advance(0.01, { moveX: 0, moveY: 0, interact: true, craft: true, aimFacing: 0 as const }) // 缓存但未步进
     sim.clearPendingEdges() // 失焦：陈旧边沿不得在回焦后触发
-    sim.advance(0.03, { moveX: 0, moveY: 0, interact: false, craft: false })
+    sim.advance(0.03, { moveX: 0, moveY: 0, interact: false, craft: false, aimFacing: 0 as const })
+    expect(sim.state.player.gathering).toBe(false)
     expect(sim.state.player.action).toBe('idle')
   })
 })
@@ -95,6 +105,30 @@ describe('Keyboard 交互锁存', () => {
     dispatchPointer(target, 0)
     dispatchKeydown(target, 'KeyW')
     expect(fired).toBe(1)
+  })
+
+  it('左键按住/松开维护 held 状态', () => {
+    const { target, kb } = attach()
+    dispatchPointer(target, 0)
+    expect(kb.interactHeld()).toBe(true)
+    target.dispatchEvent(Object.assign(new Event('pointerup'), { button: 0 }))
+    expect(kb.interactHeld()).toBe(false)
+  })
+
+  it('blur 同步清除 held', () => {
+    const { target, kb } = attach()
+    dispatchPointer(target, 0)
+    target.dispatchEvent(new Event('blur'))
+    expect(kb.interactHeld()).toBe(false)
+  })
+
+  it('aimFacing 按指针相对屏幕中线取侧位,无指针信息为 0', () => {
+    const { target, kb } = attach()
+    expect(kb.aimFacing(900)).toBe(0)
+    target.dispatchEvent(Object.assign(new Event('pointermove'), { clientX: 100 }))
+    expect(kb.aimFacing(900)).toBe(-1)
+    target.dispatchEvent(Object.assign(new Event('pointermove'), { clientX: 700 }))
+    expect(kb.aimFacing(900)).toBe(1)
   })
 
   it('blur 清除未消费的 interact 锁存，避免失焦幽灵按键', () => {
