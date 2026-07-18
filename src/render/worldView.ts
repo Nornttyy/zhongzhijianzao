@@ -24,9 +24,10 @@ export class WorldView {
   private nodeSprites = new Map<number, Sprite>()
   private dropSprites = new Map<number, Sprite>()
   private plantSprites = new Map<number, Sprite>()
+  private campfireSprites = new Map<number, { body: Sprite; flame: Sprite }>()
+  private torchSprites = new Map<number, { stick: Graphics; flame: Sprite }>()
   private corpses: Corpse[] = []
   private postSprites: Sprite[] = []
-  private flame: Sprite
   private phantom: Sprite
   private phantomEcho: Sprite
   private circle = new Graphics()
@@ -36,19 +37,15 @@ export class WorldView {
 
   constructor(private world: Container, overlay: Container, private tex: GameTextures, initial: SimState) {
     for (const n of initial.world.nodes) this.addNode(n.id, n.kind, n.tier, n.pos)
-    const campfire = footSprite(tex.campfire, CONFIG.sizes.campfireH)
-    campfire.position.set(CONFIG.campfire.x * px, CONFIG.campfire.y * px)
-    campfire.zIndex = CONFIG.campfire.y * px
-    world.addChild(campfire)
-
-    // 木堆素材"未点燃"，程序火焰点燃它
-    this.flame = new Sprite(this.glowTex)
-    this.flame.anchor.set(0.5)
-    this.flame.blendMode = 'add'
-    this.flame.tint = 0xff9a40
-    this.flame.position.set(CONFIG.campfire.x * px, (CONFIG.campfire.y - 0.55) * px)
-    this.flame.zIndex = CONFIG.campfire.y * px + 1
-    world.addChild(this.flame)
+    // 出生点古石地标（不发光不交互，纯寻路锚点；素材后补，程序占位）
+    const stone = new Graphics()
+    stone.poly([-22, 4, -14, -18, 2, -26, 16, -14, 20, 6, 8, 10, -10, 10])
+      .fill(0x4a4f46)
+      .poly([-14, -6, -4, -16, 8, -10, 4, 0, -8, 2])
+      .fill(0x5a6055)
+    stone.position.set(CONFIG.landmark.x * px, CONFIG.landmark.y * px)
+    stone.zIndex = CONFIG.landmark.y * px
+    world.addChild(stone)
 
     // 放置视觉：白色虚线圈（几何恒定，预铺一次，每帧只挪位置——终审#9）+ 鼠标残影
     const R = CONFIG.place.rangeM * px
@@ -188,10 +185,65 @@ export class WorldView {
       this.world.addChild(s, halo)
       this.postSprites.push(s)
     }
-    // 篝火火焰呼吸
-    const f = 1 + 0.18 * 0.5 * (Math.sin(timeS * 7.3) + Math.sin(timeS * 12.1))
-    this.flame.scale.set((1.1 * px * 2 * f) / 512)
-    this.flame.alpha = 0.6 + 0.1 * Math.sin(timeS * 9.1)
+    // 火源池同步:篝火(玩家搭建,火焰随余量;残烬=熄焰红点) / 插地火把
+    const now = cur.time
+    const liveC = new Set(cur.world.campfires.map((c) => c.id))
+    for (const [id, sp] of this.campfireSprites) {
+      if (!liveC.has(id)) { sp.body.destroy(); sp.flame.destroy(); this.campfireSprites.delete(id) }
+    }
+    for (const c of cur.world.campfires) {
+      let sp = this.campfireSprites.get(c.id)
+      if (!sp) {
+        const body = footSprite(this.tex.campfire, CONFIG.sizes.campfireH)
+        body.position.set(c.pos.x * px, c.pos.y * px)
+        body.zIndex = c.pos.y * px
+        const flame = new Sprite(this.glowTex)
+        flame.anchor.set(0.5)
+        flame.blendMode = 'add'
+        flame.position.set(c.pos.x * px, (c.pos.y - 0.55) * px)
+        flame.zIndex = c.pos.y * px + 1
+        this.world.addChild(body, flame)
+        sp = { body, flame }
+        this.campfireSprites.set(c.id, sp)
+      }
+      const k = Math.max(0, 1 - (now - c.fedAt) / CONFIG.fire.campfireBurnS)
+      const breath = 1 + 0.18 * 0.5 * (Math.sin(timeS * 7.3 + c.id) + Math.sin(timeS * 12.1 + c.id * 2))
+      if (k > 0) {
+        sp.flame.tint = 0xff9a40
+        sp.flame.scale.set(((0.5 + 0.6 * k) * px * 2 * breath) / 512)
+        sp.flame.alpha = 0.35 + 0.35 * k + 0.1 * Math.sin(timeS * 9.1 + c.id)
+      } else {
+        sp.flame.tint = 0xff5a30 // 残烬:一点暗红
+        sp.flame.scale.set((0.35 * px * 2) / 512)
+        sp.flame.alpha = 0.22 + 0.06 * Math.sin(timeS * 3.1 + c.id)
+      }
+    }
+    const liveT = new Set(cur.world.plantedTorches.map((t) => t.id))
+    for (const [id, sp] of this.torchSprites) {
+      if (!liveT.has(id)) { sp.stick.destroy(); sp.flame.destroy(); this.torchSprites.delete(id) }
+    }
+    for (const t of cur.world.plantedTorches) {
+      let sp = this.torchSprites.get(t.id)
+      if (!sp) {
+        const stick = new Graphics()
+        stick.rect(-2, -26, 4, 26).fill(0x6b4a2a).rect(-3, -30, 6, 6).fill(0x2e2318)
+        stick.position.set(t.pos.x * px, t.pos.y * px)
+        stick.zIndex = t.pos.y * px
+        const flame = new Sprite(this.glowTex)
+        flame.anchor.set(0.5)
+        flame.blendMode = 'add'
+        flame.tint = 0xffb050
+        flame.position.set(t.pos.x * px, t.pos.y * px - 30)
+        flame.zIndex = t.pos.y * px + 1
+        this.world.addChild(stick, flame)
+        sp = { stick, flame }
+        this.torchSprites.set(t.id, sp)
+      }
+      const k = Math.max(0, 1 - (now - t.litAt) / CONFIG.fire.torchBurnS)
+      const breath = 1 + 0.2 * Math.sin(timeS * 11 + t.id * 1.7)
+      sp.flame.scale.set(((0.16 + 0.2 * k) * px * 2 * breath) / 512)
+      sp.flame.alpha = 0.4 + 0.4 * k
+    }
     // 放置视觉：白圈跟玩家、残影跟鼠标（圈外/非法转红）
     this.circle.visible = view.showPlace
     this.ghost.visible = view.showPlace

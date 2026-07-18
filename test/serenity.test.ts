@@ -15,50 +15,60 @@ function run(s: SimState, n: number): { state: SimState; events: SimEvent[] } {
 }
 /** 修改世界字段构造测试态 */
 const withWorld = (s: SimState, w: Partial<SimState['world']>): SimState => ({ ...s, world: { ...s.world, ...w } })
+const NIGHT = CONFIG.clock.dayS + CONFIG.clock.duskS + 10 // 夜规则测试时刻
 
-describe('serenityRate 档位', () => {
-  it('柱/篝火圈 > 提灯 > 黑暗；注视叠加', () => {
-    expect(serenityRate(true, true, false)).toBe(S.zoneRegen)
-    expect(serenityRate(false, true, false)).toBe(S.lanternDrain)
-    expect(serenityRate(false, false, false)).toBe(S.darkDrain)
-    expect(serenityRate(false, true, true)).toBe(S.lanternDrain + S.stareDrain)
-    expect(serenityRate(true, true, true)).toBe(S.zoneRegen + S.stareDrain)
+describe('serenityRate 分相档位', () => {
+  it('白昼平回升；夜火圈>黑暗；注视叠加', () => {
+    expect(serenityRate('day', false, false)).toBe(S.dayRegen)
+    expect(serenityRate('night', true, false)).toBe(S.zoneRegen)
+    expect(serenityRate('night', false, false)).toBe(S.darkDrain)
+    expect(serenityRate('night', false, true)).toBe(S.darkDrain + S.stareDrain)
+    expect(serenityRate('night', true, true)).toBe(S.zoneRegen + S.stareDrain)
   })
 })
 
 describe('安宁值结算', () => {
-  it('野外提灯下每秒 -0.5', () => {
-    const { state } = run(initialSim(5, 5), 30)
-    expect(state.world.serenity).toBeCloseTo(S.initial + S.lanternDrain, 3)
+  it('夜晚野外无火每秒 -3', () => {
+    const { state } = run(withWorld(initialSim(5, 5), { clock: NIGHT }), 30)
+    expect(state.world.serenity).toBeCloseTo(S.initial + S.darkDrain, 2)
   })
-  it('营地篝火圈内回升并夹紧上限', () => {
-    const low = withWorld(initialSim(20, 20.8), { serenity: 99 }) // 出生点在篝火 6m 圈内
+  it('白昼野外自然回升并夹紧上限', () => {
+    const low = withWorld(initialSim(20, 20.8), { serenity: 99.9 })
     const { state } = run(low, 30)
     expect(state.world.serenity).toBe(S.max)
   })
-  it('提灯柱圈内回升', () => {
-    const s = withWorld(initialSim(5, 5), { serenity: 50, posts: [{ x: 5, y: 5 }] })
+  it('夜晚燃着的玩家篝火圈内回升', () => {
+    const s = withWorld(initialSim(20, 20), {
+      serenity: 50, clock: NIGHT,
+      campfires: [{ id: 900, pos: { x: 20, y: 20 }, fedAt: 0 }],
+    })
+    // fedAt=0 而世界 time=0 → 满燃
+    const { state } = run(s, 30)
+    expect(state.world.serenity).toBeCloseTo(50 + S.zoneRegen, 2)
+  })
+  it('夜晚提灯柱圈内回升', () => {
+    const s = withWorld(initialSim(5, 5), { serenity: 50, clock: NIGHT, posts: [{ x: 5, y: 5 }] })
     const { state } = run(s, 30)
     expect(state.world.serenity).toBeCloseTo(50 + S.zoneRegen, 2)
   })
   it('幻影注视 8m 内额外掉', () => {
     const s = withWorld(initialSim(5, 5), {
-      serenity: 50,
+      serenity: 50, clock: NIGHT,
       phantom: { pos: { x: 5, y: 12.5 }, mode: 'stare', modeT: 0, alpha: 1, target: { x: 5, y: 12.5 } },
     })
     const { state } = run(s, 30)
-    expect(state.world.serenity).toBeCloseTo(50 + S.lanternDrain + S.stareDrain, 2)
+    expect(state.world.serenity).toBeCloseTo(50 + S.darkDrain + S.stareDrain, 2)
   })
   it('注视掉率随 stare 模式滞回：8–9m 滞回带内仍持续掉', () => {
     const s = withWorld(initialSim(5, 5), {
-      serenity: 50, // 幻影 8.5m：已进入 stare 后退到滞回带内
+      serenity: 50, clock: NIGHT, // 幻影 8.5m：已进入 stare 后退到滞回带内
       phantom: { pos: { x: 5, y: 13.5 }, mode: 'stare', modeT: 1, alpha: 1, target: { x: 5, y: 13.5 } },
     })
     const { state } = run(s, 30)
-    expect(state.world.serenity).toBeCloseTo(50 + S.lanternDrain + S.stareDrain, 2)
+    expect(state.world.serenity).toBeCloseTo(50 + S.darkDrain + S.stareDrain, 2)
   })
   it('夹紧 0 不为负', () => {
-    const s = withWorld(initialSim(5, 5), { serenity: 0.01 })
+    const s = withWorld(initialSim(5, 5), { serenity: 0.01, clock: NIGHT })
     const { state } = run(s, 30)
     expect(state.world.serenity).toBe(0)
   })
@@ -66,8 +76,8 @@ describe('安宁值结算', () => {
 
 describe('迷失滞回', () => {
   it('跌破 30 触发 lostEnter 一次；30–40 间不解除；升至 40 触发 lostExit', () => {
-    let s = withWorld(initialSim(5, 5), { serenity: 30.005 })
-    let r = run(s, 3) // -0.5/s 很快跌破
+    let s = withWorld(initialSim(5, 5), { serenity: 30.005, clock: NIGHT })
+    let r = run(s, 3) // 夜晚无火 -3/s 很快跌破
     expect(r.events.filter((e) => e.type === 'lostEnter')).toHaveLength(1)
     expect(r.state.world.lost).toBe(true)
     // 30–40 之间维持迷失

@@ -48,7 +48,7 @@ describe('初始世界', () => {
   })
   it('开局：斧头在 0 号并选中、hp 满、无掉落物无种植', () => {
     expect(w.slots[0]).toEqual({ kind: 'axe', count: 1 })
-    expect(w.slots.filter(Boolean)).toHaveLength(1)
+    expect(w.slots.filter(Boolean)).toHaveLength(2) // 斧 + 开局火把
     expect(w.selected).toBe(0)
     expect(w.hp).toBe(CONFIG.hp.max)
     expect(w.drops).toEqual([])
@@ -64,7 +64,7 @@ describe('命中与破坏（挖完才掉）', () => {
     const { state, events } = chop(nearTree(), 1)
     expect(events.filter((e) => e.type === 'nodeHit')).toHaveLength(1)
     expect(state.world.nodes[0]!.charges).toBe(CONFIG.tiers.tree[1]!.charges - 1)
-    expect(state.world.slots.filter(Boolean)).toHaveLength(1) // 只有斧头
+    expect(state.world.slots.filter(Boolean)).toHaveLength(2) // 斧头与开局火把,无新增
   })
   it('非斧头选中不结算，也不进入挥砍姿态（无假反馈）', () => {
     const start = withSel(nearTree(), null)

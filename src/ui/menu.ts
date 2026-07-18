@@ -115,7 +115,7 @@ export class Menu {
     } else if (this.view === 'help') {
       const body = document.createElement('div')
       body.className = 'body'
-      body.innerHTML = 'WASD / 方向键 —— 移动<br>鼠标左键（可长按）—— 手持斧头朝指针方向挥砍，挖完才会掉落<br>数字键 1-9 / 滚轮 —— 切换热键栏<br>E —— 打开背包（点格子搬移，材料够可合成提灯柱）<br>鼠标右键 —— 在白圈内放置提灯柱 / 种下树苗<br><br>黑暗与幻影的注视会消磨安宁，回到灯火旁恢复。<br>攒够 10 木 5 萤，把光种进森林里。'
+      body.innerHTML = 'WASD / 方向键 —— 移动<br>鼠标左键（可长按）—— 手持斧头朝指针方向挥砍，挖完才会掉落<br>数字键 1-9 / 滚轮 —— 切换热键栏<br>E —— 打开背包（点格子搬移与合成）<br>鼠标右键 —— 白圈内放置提灯柱 / 种树苗 / 插火把；持木对篝火右键添柴<br><br>白天安全，安宁自愈；入夜黑暗侵蚀安宁——<br><b>火把是夜晚的生命线</b>（2 木合 2 支）：选中即手持照明，插地可标路但会燃尽。<br>篝火可搭建（8 木 2 萤），火会衰弱，记得喂它。<br>攒够 10 木 5 萤合提灯柱，把永恒的光种进森林。'
       add(body)
       add(this.button('返回', () => this.show(this.from)))
     } else if (this.view === 'settings') {

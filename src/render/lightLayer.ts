@@ -71,6 +71,7 @@ export function makeTornHoleTextures(): Texture[] {
 
 export class LightLayer {
   readonly container = new Container()
+  private darknessAlpha: number = CONFIG.light.darkness
   private app: Application
   private rt: RenderTexture
   private darkness: Sprite
@@ -88,12 +89,15 @@ export class LightLayer {
   }
 
   /** lights 为世界米坐标；originPx 为 world 容器在屏幕上的原点（相机偏移） */
+  /** 昼夜插值:0.06(白昼)~0.94(黑夜) */
+  setDarkness(a: number): void { this.darknessAlpha = a }
+
   update(lights: LightSpec[], originPx: { x: number; y: number }, timeS: number): void {
     const { width, height } = this.app.screen
     if (this.rt.width !== width || this.rt.height !== height) {
       this.rt.resize(width, height)
     }
-    this.cover.clear().rect(0, 0, width, height).fill({ color: 0x000000, alpha: CONFIG.light.darkness })
+    this.cover.clear().rect(0, 0, width, height).fill({ color: 0x000000, alpha: this.darknessAlpha })
     while (this.holes.length < lights.length) {
       const s = new Sprite(this.tornVariants[0])
       s.anchor.set(0.5)
