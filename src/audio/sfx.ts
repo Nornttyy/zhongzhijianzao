@@ -2,6 +2,7 @@ import { CONFIG } from '../config'
 
 /** 全程序合成音。所有节点过主低通（迷失=闷化）；风与低鸣为常驻层。 */
 export class Sfx {
+  private masterVolume = 0.9
   private ctx?: AudioContext
   private out?: GainNode
   private lp?: BiquadFilterNode
@@ -15,13 +16,19 @@ export class Sfx {
     this.lp.type = 'lowpass'
     this.lp.frequency.value = CONFIG.lost.lowpassOpenHz
     const master = ctx.createGain()
-    master.gain.value = 0.9
+    master.gain.value = this.masterVolume
     master.connect(this.lp).connect(ctx.destination)
     this.out = master
     this.startWind(ctx, master)
     this.startHum(ctx, master)
     // 部分浏览器（如 iOS Safari）键盘手势不授予音频激活，新建即 suspended
     if (ctx.state === 'suspended') ctx.resume().catch(() => {}) // 中断序列下可能 reject,静默即可
+  }
+
+  /** 主音量 0..1（菜单设置） */
+  setVolume(v: number): void {
+    this.masterVolume = Math.max(0, Math.min(1, v))
+    if (this.out && this.ctx) this.out.gain.setTargetAtTime(this.masterVolume, this.ctx.currentTime, 0.05)
   }
 
   /** 标签页隐藏/系统打断后被挂起的 context 重新拉起 */

@@ -35,12 +35,7 @@ export class Keyboard {
       if (e.button === 0) this.interactHeldState = false
     })
     target.addEventListener('pointermove', (e) => { if (typeof e.clientX === 'number') this.lastPointerX = e.clientX })
-    target.addEventListener('blur', () => {
-      this.keys.clear()
-      this.interactPressed = false
-      this.interactHeldState = false
-      this.craftPressed = false
-    })
+    target.addEventListener('blur', () => this.clear())
   }
 
   intent(): { moveX: number; moveY: number } { return intentFromKeys(this.keys) }
@@ -49,6 +44,14 @@ export class Keyboard {
     const v = this.interactPressed
     this.interactPressed = false
     return v
+  }
+
+  /** 清空全部键位与锁存（blur/菜单开合），防陈旧输入 */
+  clear(): void {
+    this.keys.clear()
+    this.interactPressed = false
+    this.interactHeldState = false
+    this.craftPressed = false
   }
 
   interactHeld(): boolean { return this.interactHeldState }

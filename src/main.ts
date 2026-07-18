@@ -12,6 +12,7 @@ import { loadTextures } from './render/textures'
 import { WorldView } from './render/worldView'
 import { Sfx } from './audio/sfx'
 import { Handmade, makeDisplacementTexture } from './render/handmade'
+import { Menu } from './ui/menu'
 import { Sim } from './sim/sim'
 import { initialSim, type SimState } from './sim/types'
 import { dist, lerp } from './sim/vec'
@@ -50,15 +51,16 @@ async function main(): Promise<void> {
   const worldView = new WorldView(scene.world, overlay, textures, sim.state)
   const noink = new URLSearchParams(location.search).has('noink') // 手作质感层对比开关
   // 轮廓沸腾:噪声位移滤镜低帧步进,万物如逐帧手绘(与 lostFx 的滤镜组合共存)
-  let boilFilters: DisplacementFilter[] = []
+  const boilFilters: DisplacementFilter[] = []
   let boilSprite: Sprite | null = null
+  let dispRef: DisplacementFilter | null = null
   if (!noink) {
     boilSprite = new Sprite(makeDisplacementTexture())
     boilSprite.renderable = false
     app.stage.addChild(boilSprite)
-    const disp = new DisplacementFilter({ sprite: boilSprite, scale: CONFIG.handmade.boilAmpPx })
-    boilFilters = [disp]
-    scene.world.filters = [disp]
+    dispRef = new DisplacementFilter({ sprite: boilSprite, scale: CONFIG.handmade.boilAmpPx })
+    boilFilters.push(dispRef)
+    scene.world.filters = [dispRef]
   }
   const lostFx = new LostFx(app, scene.world, boilFilters)
   app.stage.addChild(lostFx.container)
@@ -66,8 +68,25 @@ async function main(): Promise<void> {
   if (handmade) app.stage.addChild(handmade.container)
   const ui = new UI(app)
   app.stage.addChild(ui.container)
-  ui.toast('夜很深，跟随微光。')
-  ui.toast('WASD 移动 · 左键 采集')
+  const menu = new Menu({
+    onStart() {
+      sfx.unlock() // 开始按钮点击即用户手势,音频体面解锁
+      kb.clear(); sim.clearPendingEdges()
+      ui.toast('夜很深，跟随微光。')
+      ui.toast('WASD 移动 · 左键 采集')
+    },
+    onResume() { kb.clear(); sim.clearPendingEdges() },
+    onBackToTitle() { location.reload() }, // 无存档,整页重载即回到开局
+    onVolume(v) { sfx.setVolume(v) },
+    onInk(on) {
+      if (handmade) handmade.container.visible = on
+      // 就地改共享数组:迷失滤镜组合(lostFx baseFilters)与直接赋值都以它为准
+      boilFilters.length = 0
+      if (on && dispRef) boilFilters.push(dispRef)
+      scene.world.filters = boilFilters.length ? [...boilFilters] : (null as unknown as [])
+    },
+  })
+  window.addEventListener('keydown', (e) => { if (e.code === 'Escape') menu.togglePause() })
   document.addEventListener('visibilitychange', () => sfx.rearm())
   window.addEventListener('pointerdown', () => sfx.rearm())
   window.addEventListener('blur', () => sim.clearPendingEdges()) // 失焦丢弃陈旧输入边沿（与 Keyboard 的 blur 清理配套）
@@ -101,12 +120,15 @@ async function main(): Promise<void> {
   app.ticker.add((ticker) => {
     const realDt = Math.min(0.1, ticker.deltaMS / 1000)
     elapsed += realDt
-    sim.advance(realDt, {
-      ...kb.intent(),
-      interact: kb.interactHeld() || kb.consumeInteract(), // held 连砍 + 边沿缓存点按
-      craft: kb.consumeCraft(),
-      aimFacing: kb.aimFacing(window.innerWidth), // 角色恒居屏幕中心,屏幕中线即角色位置
-    })
+    const paused = menu.isOpen || !menu.hasStarted
+    if (!paused) {
+      sim.advance(realDt, {
+        ...kb.intent(),
+        interact: kb.interactHeld() || kb.consumeInteract(), // held 连砍 + 边沿缓存点按
+        craft: kb.consumeCraft(),
+        aimFacing: kb.aimFacing(window.innerWidth), // 角色恒居屏幕中心,屏幕中线即角色位置
+      })
+    }
     const alphaV = sim.alpha()
     const st = sim.state
 

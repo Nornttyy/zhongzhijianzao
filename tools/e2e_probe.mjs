@@ -27,7 +27,9 @@ const shot = async (name) => { await page.screenshot({ path: `${outDir}/${name}.
 const assert = (cond, msg) => { if (!cond) { console.log('[FAIL]', msg); process.exitCode = 1 } else console.log('[ok]', msg) }
 
 await page.goto(url, { waitUntil: 'networkidle' })
-await page.waitForTimeout(2500)
+await page.waitForTimeout(1500)
+await page.click('text=开始游戏') // 主菜单起手（点击手势顺带解锁音频）
+await page.waitForTimeout(1200)
 
 // 1) 出生态
 let s = await state()
@@ -35,9 +37,17 @@ assert(s.wood === 0 && s.tree0 === 4 && s.posts === 0, `出生态 wood=0 tree0=4
 assert(Math.abs(s.pos.x - 20) < 0.01 && Math.abs(s.pos.y - 20.8) < 0.01, `出生点 (20,20.8)`)
 
 // 2) 走向树0 (12.5,13)：西北向 2.7s
+// 条件走位:边走边测距,到位即停(首秒解码卡顿会吞帧,定时走位不可靠)
 await page.keyboard.down('KeyW')
 await page.keyboard.down('KeyA')
-await page.waitForTimeout(2700)
+for (let i = 0; i < 40; i++) {
+  await page.waitForTimeout(150)
+  const d = await page.evaluate(() => {
+    const p = window.__whispers.sim.state.player.pos
+    return Math.hypot(p.x - 12.5, p.y - 13)
+  })
+  if (d < 1.3) break
+}
 await page.keyboard.up('KeyW')
 await page.keyboard.up('KeyA')
 await page.waitForTimeout(300)
@@ -45,10 +55,14 @@ s = await state()
 const dTree = Math.hypot(s.pos.x - 12.5, s.pos.y - 13)
 assert(dTree < 1.6, `走到树0 交互半径内 (dist=${dTree.toFixed(2)})`)
 
-// 3) 采集 4 次采空树0
+// 3) 采集 4 次采空树0（条件推进:等木头到账再点下一刀,防循环窗口吞点击）
 for (let i = 0; i < 4; i++) {
   await page.mouse.click(640, 360)
-  await page.waitForTimeout(1500)
+  for (let w = 0; w < 30; w++) {
+    await page.waitForTimeout(150)
+    const wood = await page.evaluate(() => window.__whispers.sim.state.world.inventory.wood)
+    if (wood >= i + 1) break
+  }
 }
 await shot('e2e-1-tree-depleted')
 s = await state()
