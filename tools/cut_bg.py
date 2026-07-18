@@ -2,7 +2,8 @@
 """抠图工具：把 AI 生成的白底/黑底立绘转成透明底 PNG。
 
 用法:
-    python3 tools/cut_bg.py assets/raw/seeker-01.png assets/processed/seeker.png [--tol 38] [--preview out.png]
+    python3 tools/cut_bg.py assets/raw/seeker-01.png assets/processed/seeker.png \
+        [--tol 38] [--preview out.png] [--keep-islands] [--min-hole 800]
 
 原理:
     1. 取四角采样背景色，从图像边框洪水填充，吃掉背景（容忍纸纹噪声）
@@ -119,7 +120,7 @@ def largest_component(fg, w, h):
     return mask
 
 
-def cut(src, dst, tol=38, preview=None, keep_islands=False):
+def cut(src, dst, tol=38, preview=None, keep_islands=False, min_hole=800):
     im = Image.open(src).convert("RGBA")
     w, h = im.size
     px = im.load()
@@ -129,7 +130,7 @@ def cut(src, dst, tol=38, preview=None, keep_islands=False):
     fg = bytearray(0 if visited[i] else 1 for i in range(w * h))
     if not keep_islands:
         fg = largest_component(fg, w, h)
-    fg = remove_enclosed_holes(px, fg, w, h, bg, tol + 6)
+    fg = remove_enclosed_holes(px, fg, w, h, bg, tol + 6, min_hole)
 
     alpha = Image.new("L", (w, h), 0)
     alpha.putdata([255 if v else 0 for v in fg])
@@ -161,5 +162,7 @@ if __name__ == "__main__":
     p.add_argument("--tol", type=int, default=38)
     p.add_argument("--preview")
     p.add_argument("--keep-islands", action="store_true", help="保留所有前景块（多物件散图用）")
+    p.add_argument("--min-hole", type=int, default=800,
+                   help="视为孔洞的最小像素数；主体无透底缺口的素材（如岩石）调大以免打穿浅色面")
     args = p.parse_args()
-    cut(args.src, args.dst, args.tol, args.preview, args.keep_islands)
+    cut(args.src, args.dst, args.tol, args.preview, args.keep_islands, args.min_hole)
