@@ -4,8 +4,9 @@ import { CONFIG } from '../config'
 interface P { g: Graphics; life: number; max: number; vx: number; vy: number }
 
 export class Particles {
-  readonly container = new Container()
   private pool: P[] = []
+
+  constructor(private world: Container) {}
 
   private spawn(xM: number, yM: number, color: number, count: number, speed: number, life: number): void {
     const px = CONFIG.pxPerMeter
@@ -14,7 +15,7 @@ export class Particles {
       if (!p) {
         p = { g: new Graphics(), life: 0, max: 1, vx: 0, vy: 0 }
         this.pool.push(p)
-        this.container.addChild(p.g)
+        this.world.addChild(p.g)
       }
       const a = Math.random() * Math.PI * 2
       p.vx = Math.cos(a) * speed * (0.4 + Math.random() * 0.6)
