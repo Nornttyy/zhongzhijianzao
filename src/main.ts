@@ -1,8 +1,11 @@
 import { Application, Container } from 'pixi.js'
 import { CONFIG } from './config'
 import { Keyboard } from './input/keyboard'
+import { deriveHint } from './render/hints'
 import { LightLayer, type LightSpec } from './render/lightLayer'
+import { LostFx } from './render/lostFx'
 import { Particles } from './render/particles'
+import { UI } from './render/ui'
 import { PlayerView } from './render/playerView'
 import { Scene } from './render/scene'
 import { loadTextures } from './render/textures'
@@ -42,6 +45,12 @@ async function main(): Promise<void> {
   const overlay = new Container() // 暗幕之上：幻影等自发光体
   app.stage.addChild(overlay)
   const worldView = new WorldView(scene.world, overlay, textures, sim.state)
+  const lostFx = new LostFx(app, scene.world)
+  app.stage.addChild(lostFx.container)
+  const ui = new UI(app)
+  app.stage.addChild(ui.container)
+  ui.toast('夜很深，跟随微光。')
+  ui.toast('WASD 移动 · 左键 采集')
   document.addEventListener('visibilitychange', () => sfx.rearm())
   window.addEventListener('pointerdown', () => sfx.rearm())
 
@@ -67,8 +76,11 @@ async function main(): Promise<void> {
           else { particles.glint(e.pos.x, e.pos.y - 0.5); sfx.pickupOre() }
           break
         case 'phantomSigh': sfx.sigh(); break
-        case 'crafted': sfx.chime(); break
-        case 'postPlaced': sfx.placeThump(); break
+        case 'crafted': sfx.chime(); ui.toast('合成完成——E 放下提灯柱'); break
+        case 'postPlaced':
+          sfx.placeThump()
+          ui.toast(e.index === 0 ? '第一盏灯亮起，森林安静了些。' : '提灯柱已放置')
+          break
         case 'lostEnter': sfx.setMuffled(true); break
         case 'lostExit': sfx.setMuffled(false); break
       }
@@ -107,6 +119,12 @@ async function main(): Promise<void> {
     sfx.humLevel(ph.mode === 'stare'
       ? 1 - Math.min(1, Math.max(0, (dPh - P.dissolveRange) / (P.stareRange - P.dissolveRange)))
       : 0)
+    // HUD 与迷失表现
+    ui.setCounts(st.world.inventory.wood, st.world.inventory.fluorite)
+    ui.setSerenity(st.world.serenity)
+    ui.setHint(deriveHint(st))
+    ui.update(realDt, elapsed)
+    lostFx.update(st.world.lost, realDt)
   })
 }
 
