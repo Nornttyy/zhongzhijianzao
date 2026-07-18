@@ -2,7 +2,7 @@ import { CONFIG } from '../config'
 import { stepPhantom } from './phantom'
 import { stepPlayer } from './player'
 import { clamp, dist } from './vec'
-import type { IntentInput, ResourceNode, SimEvent, SimState, Vec2 } from './types'
+import type { IntentInput, PlayerState, ResourceNode, SimEvent, SimState, Vec2, WorldState } from './types'
 
 const EPS = 1e-8 // 与 characterAnimator 同源的帧时间漂移容差
 
@@ -16,6 +16,24 @@ export function nearestNodeIdx(nodes: readonly ResourceNode[], pos: Vec2, rangeM
     if (d <= bestD) { bestD = d; best = i }
   })
   return best
+}
+
+/** 合成条件：非放置中、资源足、距篝火 craftRange 内 */
+export function canCraft(world: WorldState, playerPos: Vec2): boolean {
+  const C = CONFIG.craft
+  return !world.placing
+    && world.inventory.wood >= C.wood
+    && world.inventory.fluorite >= C.fluorite
+    && dist(CONFIG.campfire, playerPos) <= C.rangeM
+}
+
+/** 放置预览位：玩家朝向前方 placeAheadM，世界边界内 edgeMarginM 夹紧 */
+export function previewPos(player: PlayerState): Vec2 {
+  const C = CONFIG.craft
+  return {
+    x: clamp(player.pos.x + player.facing * C.placeAheadM, C.edgeMarginM, CONFIG.world.width - C.edgeMarginM),
+    y: clamp(player.pos.y, C.edgeMarginM, CONFIG.world.height - C.edgeMarginM),
+  }
 }
 
 /** 安宁值每秒变化率：档位互斥取最高，注视为叠加项 */
@@ -47,6 +65,26 @@ export function stepWorld(s: SimState, input: IntentInput, dt: number): { state:
           : { ...world.inventory, fluorite: world.inventory.fluorite + 1 },
       }
       events.push({ type: 'harvest', kind: node.kind, nodeId: node.id, pos: node.pos, depleted: charges === 0 })
+    }
+  }
+
+  // E：放置优先于合成
+  if (input.craft) {
+    if (world.placing) {
+      const pos = previewPos(player)
+      const posts = [...world.posts, pos]
+      world = { ...world, posts, placing: false }
+      events.push({ type: 'postPlaced', pos, index: posts.length - 1 })
+    } else if (canCraft(world, player.pos)) {
+      world = {
+        ...world,
+        placing: true,
+        inventory: {
+          wood: world.inventory.wood - CONFIG.craft.wood,
+          fluorite: world.inventory.fluorite - CONFIG.craft.fluorite,
+        },
+      }
+      events.push({ type: 'crafted' })
     }
   }
 

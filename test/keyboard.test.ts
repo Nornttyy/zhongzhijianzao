@@ -96,4 +96,18 @@ describe('Keyboard 交互锁存', () => {
     target.dispatchEvent(new Event('blur'))
     expect(kb.consumeInteract()).toBe(false)
   })
+
+  it('KeyE 锁存 craft 边沿，消费一次后清空', () => {
+    const { target, kb } = attach()
+    dispatchKeydown(target, 'KeyE')
+    expect(kb.consumeCraft()).toBe(true)
+    expect(kb.consumeCraft()).toBe(false)
+  })
+
+  it('blur 清除未消费的 craft 锁存', () => {
+    const { target, kb } = attach()
+    dispatchKeydown(target, 'KeyE')
+    target.dispatchEvent(new Event('blur'))
+    expect(kb.consumeCraft()).toBe(false)
+  })
 })
