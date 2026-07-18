@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { intentFromKeys } from '../src/input/keyboard'
+import { intentFromKeys, Keyboard } from '../src/input/keyboard'
 import { Sim } from '../src/sim/sim'
 import { initialSim } from '../src/sim/types'
 
@@ -39,5 +39,26 @@ describe('Sim 固定步长', () => {
     // 第1步边沿进入采集，第2步移动取消采集回到行走，
     // 第3步若边沿泄漏到后续步会再次进入采集——期望仍为行走
     expect(sim.state.player.action).toBe('walking')
+  })
+  it('无步帧消费的 interact 边沿被缓存到下一次实际步进', () => {
+    const sim = new Sim(initialSim(20, 20))
+    sim.advance(0.01, { moveX: 0, moveY: 0, interact: true }) // 累积不足一步
+    expect(sim.state.player.action).toBe('idle')
+    sim.advance(0.03, { moveX: 0, moveY: 0, interact: false }) // 此帧才步进
+    expect(sim.state.player.action).toBe('gathering')
+  })
+})
+
+describe('Keyboard 交互锁存', () => {
+  const dispatchKeydown = (target: EventTarget, code: string) =>
+    target.dispatchEvent(Object.assign(new Event('keydown'), { code, repeat: false }))
+
+  it('blur 清除未消费的 interact 锁存，避免失焦幽灵按键', () => {
+    const target = new EventTarget() as unknown as Window
+    const kb = new Keyboard()
+    kb.attach(target)
+    dispatchKeydown(target, 'KeyE')
+    target.dispatchEvent(new Event('blur'))
+    expect(kb.consumeInteract()).toBe(false)
   })
 })

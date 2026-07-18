@@ -6,6 +6,7 @@ export class Sim {
   state: SimState
   prev: SimState
   private acc = 0
+  private pendingInteract = false
 
   constructor(initial: SimState) {
     this.state = initial
@@ -14,15 +15,15 @@ export class Sim {
 
   advance(realDt: number, input: IntentInput): void {
     this.acc += Math.min(realDt, 0.25)
-    let interact = input.interact // 边沿只投递给第一步
+    if (input.interact) this.pendingInteract = true // 缓存边沿直到真正步进
     while (this.acc >= this.dt) {
       this.acc -= this.dt
       this.prev = this.state
       this.state = {
         time: this.state.time + this.dt,
-        player: stepPlayer(this.state.player, { ...input, interact }, this.dt),
+        player: stepPlayer(this.state.player, { ...input, interact: this.pendingInteract }, this.dt),
       }
-      interact = false
+      this.pendingInteract = false // 只投递给第一个实际执行的步
     }
   }
 

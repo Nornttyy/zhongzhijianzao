@@ -19,7 +19,7 @@ export class Keyboard {
       if (e.code === 'KeyE') this.interactPressed = true
     })
     target.addEventListener('keyup', (e) => this.keys.delete(e.code))
-    target.addEventListener('blur', () => this.keys.clear())
+    target.addEventListener('blur', () => { this.keys.clear(); this.interactPressed = false })
   }
 
   intent(): { moveX: number; moveY: number } { return intentFromKeys(this.keys) }
