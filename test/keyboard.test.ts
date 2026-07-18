@@ -52,12 +52,47 @@ describe('Sim 固定步长', () => {
 describe('Keyboard 交互锁存', () => {
   const dispatchKeydown = (target: EventTarget, code: string) =>
     target.dispatchEvent(Object.assign(new Event('keydown'), { code, repeat: false }))
-
-  it('blur 清除未消费的 interact 锁存，避免失焦幽灵按键', () => {
+  const dispatchPointer = (target: EventTarget, button: number) =>
+    target.dispatchEvent(Object.assign(new Event('pointerdown'), { button }))
+  const attach = () => {
     const target = new EventTarget() as unknown as Window
     const kb = new Keyboard()
     kb.attach(target)
+    return { target, kb }
+  }
+
+  it('鼠标左键锁存一次采集边沿', () => {
+    const { target, kb } = attach()
+    dispatchPointer(target, 0)
+    expect(kb.consumeInteract()).toBe(true)
+    expect(kb.consumeInteract()).toBe(false)
+  })
+
+  it('右键/中键不触发采集', () => {
+    const { target, kb } = attach()
+    dispatchPointer(target, 2)
+    dispatchPointer(target, 1)
+    expect(kb.consumeInteract()).toBe(false)
+  })
+
+  it('E 键不再触发采集（留给未来合成/放置）', () => {
+    const { target, kb } = attach()
     dispatchKeydown(target, 'KeyE')
+    expect(kb.consumeInteract()).toBe(false)
+  })
+
+  it('首次输入回调兼容鼠标（音频解锁手势）', () => {
+    const { target, kb } = attach()
+    let fired = 0
+    kb.onFirstInput = () => fired++
+    dispatchPointer(target, 0)
+    dispatchKeydown(target, 'KeyW')
+    expect(fired).toBe(1)
+  })
+
+  it('blur 清除未消费的 interact 锁存，避免失焦幽灵按键', () => {
+    const { target, kb } = attach()
+    dispatchPointer(target, 0)
     target.dispatchEvent(new Event('blur'))
     expect(kb.consumeInteract()).toBe(false)
   })

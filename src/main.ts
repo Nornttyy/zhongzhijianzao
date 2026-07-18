@@ -32,7 +32,7 @@ async function main(): Promise<void> {
   const sim = new Sim(initialSim(CONFIG.world.width / 2, CONFIG.world.height / 2))
   const kb = new Keyboard()
   kb.attach(window)
-  kb.onFirstKey = () => sfx.unlock()
+  kb.onFirstInput = () => sfx.unlock()
   const player = new PlayerView(textures.seeker)
   scene.world.addChild(player.sprite)
 
