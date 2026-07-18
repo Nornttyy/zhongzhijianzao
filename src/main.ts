@@ -30,9 +30,12 @@ async function main(): Promise<void> {
     const realDt = Math.min(0.1, ticker.deltaMS / 1000)
     elapsed += realDt
     sim.advance(realDt, { ...kb.intent(), interact: kb.consumeInteract() })
-    player.update(sim.prev, sim.state, sim.alpha(), elapsed, noSinks)
-    const p = sim.state.player.pos
-    scene.follow(p.x, p.y)
+    const alphaV = sim.alpha()
+    player.update(sim.prev, sim.state, alphaV, elapsed, noSinks)
+    // 相机与精灵使用同一插值位置，否则每个 sim tick 相机产生锯齿抖动
+    const pp = sim.prev.player.pos
+    const cp = sim.state.player.pos
+    scene.follow(pp.x + (cp.x - pp.x) * alphaV, pp.y + (cp.y - pp.y) * alphaV)
   })
 }
 
