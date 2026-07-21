@@ -2,6 +2,9 @@ import { Assets, Container, Graphics, Rectangle, Texture, type Renderer } from '
 
 export interface GameTextures {
   seeker: Texture
+  seekerFrontHead: Texture; seekerFrontBody: Texture
+  seekerFrontUpperArm: Texture; seekerFrontLowerArm: Texture
+  seekerFrontUpperLeg: Texture; seekerFrontLowerLeg: Texture
   seekerSideHead: Texture; seekerSideBody: Texture
   seekerSideUpperArm: Texture; seekerSideLowerArm: Texture
   seekerSideUpperLeg: Texture; seekerSideLowerLeg: Texture
@@ -14,6 +17,9 @@ export interface GameTextures {
 type LoadableTex = Exclude<keyof GameTextures, 'torchIcon' | 'postIcon'>
 const FILES: Record<LoadableTex, string> = {
   seeker: 'seeker-front-clean.png?v=3',
+  seekerFrontHead: 'seeker-front-head.png?v=4', seekerFrontBody: 'seeker-front-body.png?v=4',
+  seekerFrontUpperArm: 'seeker-front-upper-arm.png?v=4', seekerFrontLowerArm: 'seeker-front-lower-arm.png?v=4',
+  seekerFrontUpperLeg: 'seeker-front-upper-leg.png?v=4', seekerFrontLowerLeg: 'seeker-front-lower-leg.png?v=4',
   seekerSideHead: 'seeker-side-head.png?v=3', seekerSideBody: 'seeker-side-body.png?v=3',
   seekerSideUpperArm: 'seeker-side-upper-arm.png?v=3', seekerSideLowerArm: 'seeker-side-lower-arm.png?v=3',
   seekerSideUpperLeg: 'seeker-side-upper-leg.png?v=3', seekerSideLowerLeg: 'seeker-side-lower-leg.png?v=3',
@@ -43,6 +49,16 @@ const drawSeeker = (g: Graphics): void => {
 
 const builders: Record<LoadableTex, (g: Graphics) => void> = {
   seeker: drawSeeker,
+  seekerFrontHead(g) {
+    g.circle(0, 14, 16).fill(0x777a6c)
+    g.circle(-5, 12, 3).fill(0xffd77a)
+    g.circle(5, 12, 3).fill(0xffd77a)
+  },
+  seekerFrontBody(g) { g.roundRect(-16, 0, 32, 52, 10).fill(0x888b7b) },
+  seekerFrontUpperArm(g) { g.roundRect(-6, 0, 12, 28, 6).fill(0x999b8b) },
+  seekerFrontLowerArm(g) { g.roundRect(-5, 0, 10, 26, 5).fill(0xaaa99a) },
+  seekerFrontUpperLeg(g) { g.roundRect(-7, 0, 14, 30, 6).fill(0x777a6c) },
+  seekerFrontLowerLeg(g) { g.roundRect(-6, 0, 18, 30, 5).fill(0x666a5f) },
   seekerSideHead(g) {
     g.circle(0, 14, 16).fill(0x777a6c)
     g.circle(7, 12, 3).fill(0xffd77a)
@@ -135,10 +151,15 @@ async function loadOne(renderer: Renderer, name: LoadableTex, fallback?: Texture
 }
 
 export async function loadTextures(renderer: Renderer): Promise<GameTextures> {
-  const [seeker, seekerSideHead, seekerSideBody, seekerSideUpperArm, seekerSideLowerArm,
+  const [seeker, seekerFrontHead, seekerFrontBody, seekerFrontUpperArm, seekerFrontLowerArm,
+    seekerFrontUpperLeg, seekerFrontLowerLeg,
+    seekerSideHead, seekerSideBody, seekerSideUpperArm, seekerSideLowerArm,
     seekerSideUpperLeg, seekerSideLowerLeg,
     tree, ore, campfire, post, phantom, axe, wood, fluorite, sapling, heart, torch, stone] = await Promise.all([
     loadOne(renderer, 'seeker'),
+    loadOne(renderer, 'seekerFrontHead'), loadOne(renderer, 'seekerFrontBody'),
+    loadOne(renderer, 'seekerFrontUpperArm'), loadOne(renderer, 'seekerFrontLowerArm'),
+    loadOne(renderer, 'seekerFrontUpperLeg'), loadOne(renderer, 'seekerFrontLowerLeg'),
     loadOne(renderer, 'seekerSideHead'), loadOne(renderer, 'seekerSideBody'),
     loadOne(renderer, 'seekerSideUpperArm'), loadOne(renderer, 'seekerSideLowerArm'),
     loadOne(renderer, 'seekerSideUpperLeg'), loadOne(renderer, 'seekerSideLowerLeg'),
@@ -155,7 +176,9 @@ export async function loadTextures(renderer: Renderer): Promise<GameTextures> {
   const torchIcon = topCrop(torch, torch.width * 1.7)
   const postIcon = topCrop(post, post.width * 1.12)
   return {
-    seeker, seekerSideHead, seekerSideBody, seekerSideUpperArm, seekerSideLowerArm,
+    seeker, seekerFrontHead, seekerFrontBody, seekerFrontUpperArm, seekerFrontLowerArm,
+    seekerFrontUpperLeg, seekerFrontLowerLeg,
+    seekerSideHead, seekerSideBody, seekerSideUpperArm, seekerSideLowerArm,
     seekerSideUpperLeg, seekerSideLowerLeg, tree, ore, campfire, post, phantom,
     axe, wood, fluorite, sapling, heart, torch, stone, torchIcon, postIcon,
   }

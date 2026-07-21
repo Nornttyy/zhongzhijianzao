@@ -12,6 +12,7 @@ def main() -> None:
     parser.add_argument("src", help="已经抠除背景的 3×2 零件表")
     parser.add_argument("out_dir", help="输出文件夹")
     parser.add_argument("--prefix", default="seeker-side")
+    parser.add_argument("--view", choices=("side", "front"), default="side")
     parser.add_argument("--padding", type=int, default=8)
     args = parser.parse_args()
 
@@ -19,10 +20,15 @@ def main() -> None:
     col_1 = sheet.width // 3
     col_2 = sheet.width * 2 // 3
     mid_y = sheet.height // 2
-    # 上排的头巾略伸过数学三等分线，因此在纯背景空隙中使用可重叠的自定义边界。
-    head_right = round(sheet.width * 0.42)
-    body_left = round(sheet.width * 0.40)
-    body_right = round(sheet.width * 0.70)
+    # 两套母图的斗篷宽度不同，因此都在各自的纯背景空隙中下刀。
+    if args.view == "side":
+        head_right = round(sheet.width * 0.42)
+        body_left = round(sheet.width * 0.40)
+        body_right = round(sheet.width * 0.70)
+    else:
+        head_right = col_1
+        body_left = col_1
+        body_right = round(sheet.width * 0.73)
     cells = {
         "head": (0, 0, head_right, mid_y),
         "body": (body_left, 0, body_right, mid_y),

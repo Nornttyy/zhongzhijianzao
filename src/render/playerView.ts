@@ -56,11 +56,12 @@ export class PlayerView {
 
     const { transform, events } = animate(sample)
     const kind = selectedKind(cur.world)
-    this.rig.update(kind, cp.action, actionT, cp.gathering, gatherT)
+    this.rig.update(kind, cp.action, actionT, cp.gathering, gatherT, timeS)
     const px = CONFIG.pxPerMeter
     const xM = lerp(pp.pos.x, cp.pos.x, alphaV)
     const yM = lerp(pp.pos.y, cp.pos.y, alphaV)
-    this.container.position.set(xM * px + transform.offsetXPx, yM * px + transform.offsetYPx)
+    // 旧动画会把整张立绘向上提 5px；骨骼版改由腿和髋表现重心，脚底留在世界坐标上。
+    this.container.position.set(xM * px + transform.offsetXPx, yM * px)
     // 转身、走路和挥斧都由关节处理，世界容器不再整块旋转。
     this.container.rotation = 0
     this.container.scale.set(this.baseScale * transform.scaleX * cp.facing, this.baseScale * transform.scaleY)
