@@ -1,7 +1,9 @@
 import { Assets, Container, Graphics, Rectangle, Texture, type Renderer } from 'pixi.js'
 
 export interface GameTextures {
-  seeker: Texture; seekerAxe: Texture; seekerTorch: Texture
+  seeker: Texture; seekerWalk: Texture
+  seekerAxe: Texture; seekerAxeWalk: Texture; seekerAxeWindup: Texture; seekerAxeStrike: Texture
+  seekerTorch: Texture; seekerTorchWalk: Texture
   tree: Texture; ore: Texture; campfire: Texture; post: Texture; phantom: Texture
   axe: Texture; wood: Texture; fluorite: Texture; sapling: Texture; heart: Texture
   torch: Texture; stone: Texture
@@ -10,10 +12,13 @@ export interface GameTextures {
 
 type LoadableTex = Exclude<keyof GameTextures, 'torchIcon' | 'postIcon'>
 const FILES: Record<LoadableTex, string> = {
-  seeker: 'seeker.png', seekerAxe: 'seeker-axe.png?v=1', seekerTorch: 'seeker-torch.png?v=1',
+  seeker: 'seeker-aligned.png?v=2', seekerWalk: 'seeker-walk.png?v=2',
+  seekerAxe: 'seeker-handaxe-idle.png?v=2', seekerAxeWalk: 'seeker-handaxe-walk.png?v=2',
+  seekerAxeWindup: 'seeker-handaxe-windup.png?v=2', seekerAxeStrike: 'seeker-handaxe-strike.png?v=2',
+  seekerTorch: 'seeker-torch-aligned.png?v=2', seekerTorchWalk: 'seeker-torch-walk.png?v=2',
   tree: 'whisper-tree.png', ore: 'lumina-ore.png',
   campfire: 'campfire.png', post: 'lantern-post.png', phantom: 'phantom.png',
-  axe: 'axe.png', wood: 'wood.png', fluorite: 'fluorite.png', sapling: 'sapling.png', heart: 'heart.png',
+  axe: 'hand-axe.png?v=1', wood: 'wood.png', fluorite: 'fluorite.png', sapling: 'sapling.png', heart: 'heart.png',
   // 版本号让已经打开过旧占位图的浏览器重新下载正式素材。
   torch: 'torch.png?v=3', stone: 'ancient-stone.png?v=3',
 }
@@ -37,9 +42,14 @@ const drawSeeker = (g: Graphics): void => {
 
 const builders: Record<LoadableTex, (g: Graphics) => void> = {
   seeker: drawSeeker,
-  // 持物合成立绘缺失时退回角色占位，不再把物品图片硬贴到角色身上。
+  seekerWalk: drawSeeker,
+  // 持物/动作立绘缺失时会由 loadTextures 退回已加载的角色帧。
   seekerAxe: drawSeeker,
+  seekerAxeWalk: drawSeeker,
+  seekerAxeWindup: drawSeeker,
+  seekerAxeStrike: drawSeeker,
   seekerTorch: drawSeeker,
+  seekerTorchWalk: drawSeeker,
   tree(g) {
     g.rect(-7, -62, 14, 62).fill(0x2e4038)
     g.circle(0, -84, 34).fill(0x2f5a4c)
@@ -102,17 +112,20 @@ const builders: Record<LoadableTex, (g: Graphics) => void> = {
   },
 }
 
-async function loadOne(renderer: Renderer, name: LoadableTex): Promise<Texture> {
+async function loadOne(renderer: Renderer, name: LoadableTex, fallback?: Texture): Promise<Texture> {
   let tex: Texture
   try {
     tex = await Assets.load<Texture>(`./assets/${FILES[name]}`)
   } catch {
     console.warn(`${FILES[name]} 缺失，使用程序占位`)
-    const c = new Container()
-    const g = new Graphics()
-    builders[name](g)
-    c.addChild(g)
-    tex = renderer.generateTexture(c)
+    if (fallback) tex = fallback
+    else {
+      const c = new Container()
+      const g = new Graphics()
+      builders[name](g)
+      c.addChild(g)
+      tex = renderer.generateTexture(c)
+    }
   }
   // 立绘原图按 ~10:1 缩小显示，无 mipmap 会持续采样抖动
   tex.source.autoGenerateMipmaps = true
@@ -120,8 +133,14 @@ async function loadOne(renderer: Renderer, name: LoadableTex): Promise<Texture> 
 }
 
 export async function loadTextures(renderer: Renderer): Promise<GameTextures> {
-  const [seeker, seekerAxe, seekerTorch, tree, ore, campfire, post, phantom, axe, wood, fluorite, sapling, heart, torch, stone] = await Promise.all([
-    loadOne(renderer, 'seeker'), loadOne(renderer, 'seekerAxe'), loadOne(renderer, 'seekerTorch'),
+  // 先加载对齐后的基准帧；其他玩家帧缺失时复用它，避免退成尺寸不一致的小占位图。
+  const seeker = await loadOne(renderer, 'seeker')
+  const [seekerWalk, seekerAxe, seekerAxeWalk, seekerAxeWindup, seekerAxeStrike, seekerTorch, seekerTorchWalk,
+    tree, ore, campfire, post, phantom, axe, wood, fluorite, sapling, heart, torch, stone] = await Promise.all([
+    loadOne(renderer, 'seekerWalk', seeker),
+    loadOne(renderer, 'seekerAxe', seeker), loadOne(renderer, 'seekerAxeWalk', seeker),
+    loadOne(renderer, 'seekerAxeWindup', seeker), loadOne(renderer, 'seekerAxeStrike', seeker),
+    loadOne(renderer, 'seekerTorch', seeker), loadOne(renderer, 'seekerTorchWalk', seeker),
     loadOne(renderer, 'tree'), loadOne(renderer, 'ore'),
     loadOne(renderer, 'campfire'), loadOne(renderer, 'post'), loadOne(renderer, 'phantom'),
     loadOne(renderer, 'axe'), loadOne(renderer, 'wood'), loadOne(renderer, 'fluorite'),
@@ -135,7 +154,8 @@ export async function loadTextures(renderer: Renderer): Promise<GameTextures> {
   const torchIcon = topCrop(torch, torch.width * 1.7)
   const postIcon = topCrop(post, post.width * 1.12)
   return {
-    seeker, seekerAxe, seekerTorch, tree, ore, campfire, post, phantom,
+    seeker, seekerWalk, seekerAxe, seekerAxeWalk, seekerAxeWindup, seekerAxeStrike,
+    seekerTorch, seekerTorchWalk, tree, ore, campfire, post, phantom,
     axe, wood, fluorite, sapling, heart, torch, stone, torchIcon, postIcon,
   }
 }
