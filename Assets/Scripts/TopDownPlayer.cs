@@ -5,15 +5,17 @@ namespace DoNotOpen.Prototype
     [RequireComponent(typeof(Rigidbody2D))]
     public sealed class TopDownPlayer : MonoBehaviour
     {
-        public float Speed { get; set; } = 3.8f;
-        public Transform VisualRoot { get; set; }
-        public SpriteRenderer PlayerSprite { get; set; }
+        public float Speed { get; set; } = 3.6f;
+        public Transform VisualRoot { get; private set; }
+        public SpriteRenderer PlayerSprite { get; private set; }
+        public Vector2 Facing { get; private set; } = Vector2.down;
+        public ProceduralWorld World { get; set; }
 
         private Rigidbody2D body;
         private Vector2 movement;
         private Vector2 spawnPosition;
         private Vector3 visualOrigin;
-        private Vector3 visualScale;
+        private Vector3 visualScale = Vector3.one;
         private float bouncePhase;
         private float moveBlend;
 
@@ -29,18 +31,24 @@ namespace DoNotOpen.Prototype
         {
             body = GetComponent<Rigidbody2D>();
             spawnPosition = transform.position;
-
-            if (VisualRoot != null)
-            {
-                visualOrigin = VisualRoot.localPosition;
-                visualScale = VisualRoot.localScale;
-            }
         }
 
         private void Update()
         {
             movement = new Vector2(Input.GetAxisRaw("Horizontal"), Input.GetAxisRaw("Vertical"));
             movement = Vector2.ClampMagnitude(movement, 1f);
+
+            if (movement.sqrMagnitude > 0.01f)
+            {
+                if (Mathf.Abs(movement.x) > Mathf.Abs(movement.y))
+                {
+                    Facing = movement.x < 0f ? Vector2.left : Vector2.right;
+                }
+                else
+                {
+                    Facing = movement.y < 0f ? Vector2.down : Vector2.up;
+                }
+            }
 
             if (PlayerSprite != null && Mathf.Abs(movement.x) > 0.01f)
             {
@@ -53,6 +61,14 @@ namespace DoNotOpen.Prototype
             {
                 body.position = spawnPosition;
                 body.linearVelocity = Vector2.zero;
+            }
+        }
+
+        private void LateUpdate()
+        {
+            if (PlayerSprite != null)
+            {
+                PlayerSprite.sortingOrder = 320 - Mathf.RoundToInt(transform.position.y * 10f);
             }
         }
 
@@ -81,6 +97,26 @@ namespace DoNotOpen.Prototype
 
         private void FixedUpdate()
         {
+            Vector2 next = body.position + movement * (Speed * Time.fixedDeltaTime);
+            if (World != null)
+            {
+                Vector2 horizontal = new Vector2(next.x, body.position.y);
+                if (World.CanStandAt(horizontal, 0.24f))
+                {
+                    body.position = horizontal;
+                }
+
+                Vector2 vertical = new Vector2(body.position.x, next.y);
+                if (World.CanStandAt(vertical, 0.24f))
+                {
+                    body.position = vertical;
+                }
+
+                body.position = World.ClampToBounds(body.position, 0.3f);
+                body.linearVelocity = Vector2.zero;
+                return;
+            }
+
             body.linearVelocity = movement * Speed;
         }
 

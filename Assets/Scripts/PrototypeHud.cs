@@ -4,23 +4,39 @@ namespace DoNotOpen.Prototype
 {
     public sealed class PrototypeHud : MonoBehaviour
     {
+        private ProceduralWorld world;
+        private TopDownPlayer player;
         private GUIStyle titleStyle;
         private GUIStyle bodyStyle;
+        private GUIStyle coordinateStyle;
+
+        public void Initialize(ProceduralWorld generatedWorld, TopDownPlayer controlledPlayer)
+        {
+            world = generatedWorld;
+            player = controlledPlayer;
+        }
 
         private void OnGUI()
         {
+            if (world == null || player == null)
+            {
+                return;
+            }
+
             EnsureStyles();
 
-            GUI.Box(new Rect(18f, 18f, 330f, 92f), GUIContent.none);
-            GUI.Label(new Rect(34f, 29f, 290f, 26f), "DO NOT OPEN — PIXEL PROTOTYPE", titleStyle);
-            GUI.Label(new Rect(34f, 57f, 290f, 22f), "WASD / Arrow Keys   Move", bodyStyle);
-            GUI.Label(new Rect(34f, 79f, 290f, 22f), "R   Reset position", bodyStyle);
+            GUI.Box(new Rect(18f, 18f, 282f, 102f), GUIContent.none);
+            GUI.Label(new Rect(34f, 28f, 245f, 25f), "ZHONG ZHI JIAN ZAO", titleStyle);
+            GUI.Label(new Rect(34f, 54f, 245f, 20f), "100,000 x 100,000  |  Seed " + world.Seed, bodyStyle);
+            GUI.Label(new Rect(34f, 76f, 245f, 20f), "WASD / Arrows   Move", bodyStyle);
+            GUI.Label(new Rect(34f, 96f, 245f, 20f), "R   Return to start", bodyStyle);
 
-            string hint = "The apartment is quiet. Walk around and look closely.";
-            Vector2 size = bodyStyle.CalcSize(new GUIContent(hint));
-            GUI.Box(new Rect((Screen.width - size.x) * 0.5f - 12f, Screen.height - 55f, size.x + 24f, 36f),
-                GUIContent.none);
-            GUI.Label(new Rect((Screen.width - size.x) * 0.5f, Screen.height - 48f, size.x, 24f), hint, bodyStyle);
+            Vector2Int tile = world.WorldToTile(player.transform.position);
+            string coordinates = "X " + tile.x.ToString("N0") + "    Y " + tile.y.ToString("N0");
+            Vector2 size = coordinateStyle.CalcSize(new GUIContent(coordinates));
+            Rect panel = new Rect((Screen.width - size.x) * 0.5f - 14f, Screen.height - 56f, size.x + 28f, 38f);
+            GUI.Box(panel, GUIContent.none);
+            GUI.Label(new Rect(panel.x + 14f, panel.y + 7f, size.x, 24f), coordinates, coordinateStyle);
         }
 
         private void EnsureStyles()
@@ -32,15 +48,22 @@ namespace DoNotOpen.Prototype
 
             titleStyle = new GUIStyle(GUI.skin.label)
             {
-                fontSize = 14,
+                fontSize = 16,
                 fontStyle = FontStyle.Bold,
-                normal = { textColor = new Color(0.88f, 0.93f, 0.91f) }
+                normal = { textColor = new Color(0.94f, 0.90f, 0.70f) }
             };
 
             bodyStyle = new GUIStyle(GUI.skin.label)
             {
                 fontSize = 13,
-                normal = { textColor = new Color(0.72f, 0.8f, 0.78f) }
+                normal = { textColor = new Color(0.86f, 0.91f, 0.80f) }
+            };
+
+            coordinateStyle = new GUIStyle(bodyStyle)
+            {
+                fontSize = 15,
+                fontStyle = FontStyle.Bold,
+                alignment = TextAnchor.MiddleCenter
             };
         }
     }

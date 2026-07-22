@@ -9,16 +9,16 @@ namespace DoNotOpen.EditorTools
     public static class WebBuild
     {
         private const string ScenePath = "Assets/Scenes/Prototype.unity";
-        private const string DefaultOutputPath = "Builds/WebGL";
+        private const string DefaultOutputPath = "docs";
 
-        [MenuItem("Do Not Open/Build Web Version")]
+        [MenuItem("Zhong Zhi Jian Zao/Build Web Version")]
         public static void BuildWebVersion()
         {
             string outputPath = ReadArgument("-webBuildPath") ?? DefaultOutputPath;
             outputPath = Path.GetFullPath(outputPath);
             Directory.CreateDirectory(outputPath);
 
-            PlayerSettings.productName = "Do Not Open";
+            PlayerSettings.productName = "Zhong Zhi Jian Zao";
             PlayerSettings.companyName = "Nornttyy";
             PlayerSettings.bundleVersion = "0.1.0";
             PlayerSettings.runInBackground = true;
@@ -47,6 +47,8 @@ namespace DoNotOpen.EditorTools
                 throw new InvalidOperationException(
                     $"Web build failed: {summary.result}, {summary.totalErrors} error(s).");
             }
+
+            File.WriteAllText(Path.Combine(outputPath, ".nojekyll"), string.Empty);
 
             Debug.Log($"Web build completed: {outputPath} ({summary.totalSize} bytes)");
         }

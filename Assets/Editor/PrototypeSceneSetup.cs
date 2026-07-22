@@ -11,7 +11,7 @@ namespace DoNotOpen.EditorTools
         private const string SceneDirectory = "Assets/Scenes";
         private const string ScenePath = SceneDirectory + "/Prototype.unity";
 
-        [MenuItem("Do Not Open/Create Prototype Scene")]
+        [MenuItem("Zhong Zhi Jian Zao/Create Prototype Scene")]
         public static void CreatePrototypeScene()
         {
             Directory.CreateDirectory(SceneDirectory);

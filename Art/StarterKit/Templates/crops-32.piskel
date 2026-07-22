@@ -1,0 +1,14 @@
+{
+  "modelVersion": 2,
+  "piskel": {
+    "name": "Crop Growth 32",
+    "description": "Pixelorama beginner template — hide the guide layer before exporting",
+    "fps": 1,
+    "height": 96,
+    "width": 256,
+    "layers": [
+      "{\"name\":\"你的绘画\",\"opacity\":1,\"frameCount\":1,\"chunks\":[{\"layout\":[[0]],\"base64PNG\":\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQAAAABgCAYAAADy8ayIAAAAdklEQVR42u3BMQEAAADCoPVPbQsvoAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAeBiAbwABnnHm/QAAAABJRU5ErkJggg==\"}]}",
+      "{\"name\":\"参考线（导出前隐藏）\",\"opacity\":1,\"frameCount\":1,\"chunks\":[{\"layout\":[[0]],\"base64PNG\":\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQAAAABgCAYAAADy8ayIAAAB1UlEQVR42u3XsQ1EIQxEQTqmGWiH2pDoACcOdk7ypRMsetIfc6/jnMu88f4af3w+v9E2AJ8vAAbg8wXAAHy+ABiAzxcAA/D5AmAAPl8ADMDnC4AB+HwBMACfLwAG4PMFwAB8vgAYgM8XAAPw+QJgAD5fAAzA5wuAAfh8ATAAny8ABuDzBcAD4PMFgM/nCwCfzxcAPp8vAHw+XwD4fL4A8Pl8AeDz+QLA5/MFgM/nCwCfzxcAPp9fCYBzLvMUmM/3CWAAPl8ADMDnC4AB+HwBMACfLwAG4PMFwAB8vgAYgM8XAAPw+QJgAD5fAAzA5wuAAfh8ATAAny8ABuDzBcAAfL4AGIDPFwAD8PkCYAA+XwA8AD5fAPh8vgDw+XwB4PP5AsDn8wWAz+cLAJ/PFwA+ny8AfD5fAPh8vgDw+XwB4PP5AsDn8/8C4JzLPAXm830CGIDPFwAD8PkCYAA+XwAMwOcLgAH4fAEwAJ8vAAbg8wXAAHy+ABiAzxcAA/D5AmAAPl8ADMDnC4AB+HwBMACfLwAG4PMFwAB8vgAYgM8XAA+AzxcAPp8vAHw+XwD4fL4A8Pl8AeDz+QLA5/MFgM/nCwCfzxcAPp8vAHw+XwD4fH4pAM65zLs4S+cZuwzvigAAAABJRU5ErkJggg==\"}]}"
+    ]
+  }
+}

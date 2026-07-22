@@ -1,0 +1,14 @@
+{
+  "modelVersion": 2,
+  "piskel": {
+    "name": "Player Single Frame",
+    "description": "Pixelorama beginner template — hide the guide layer before exporting",
+    "fps": 1,
+    "height": 40,
+    "width": 32,
+    "layers": [
+      "{\"name\":\"你的绘画\",\"opacity\":1,\"frameCount\":1,\"chunks\":[{\"layout\":[[0]],\"base64PNG\":\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAoCAYAAACfKfiZAAAAG0lEQVR42u3BAQEAAACCIP+vbkhAAQAAAADvBhQoAAFipV67AAAAAElFTkSuQmCC\"}]}",
+      "{\"name\":\"参考线（导出前隐藏）\",\"opacity\":1,\"frameCount\":1,\"chunks\":[{\"layout\":[[0]],\"base64PNG\":\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAoCAYAAACfKfiZAAAAWUlEQVR42mPInzplH7n4zYnSLSBMiRkMYIJMAHMAufpHHTDqgFEHjDpg1AGjDhh1ANjuqzkxdwYSj0bBqANGHTDqgFEHjDpg1AGjDhh1wGibcDQKGAZ6mA4Au0KsU66L8YYAAAAASUVORK5CYII=\"}]}"
+    ]
+  }
+}

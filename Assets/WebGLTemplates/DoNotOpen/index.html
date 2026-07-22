@@ -3,18 +3,18 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#07090d">
-  <meta name="description" content="《不要开门》2D 恐怖游戏视野原型">
-  <title>{{{ PRODUCT_NAME }}}</title>
+  <meta name="theme-color" content="#263529">
+  <meta name="description" content="一款俯视角种植、挖矿、建造与烹饪游戏">
+  <title>Zhong Zhi Jian Zao</title>
   <style>
     :root {
       color-scheme: dark;
-      --ink: #e4edea;
-      --muted: #8da09b;
-      --line: rgba(175, 209, 199, 0.16);
-      --panel: rgba(14, 18, 23, 0.88);
-      --accent: #5fd0bd;
-      --danger: #b64a4f;
+      --ink: #f5edd2;
+      --muted: #bdcaa6;
+      --line: rgba(237, 219, 156, 0.24);
+      --panel: rgba(40, 57, 41, 0.9);
+      --accent: #e6c76f;
+      --danger: #c86b5c;
     }
 
     * { box-sizing: border-box; }
@@ -23,8 +23,8 @@
       min-height: 100%;
       margin: 0;
       background:
-        radial-gradient(circle at 50% -20%, rgba(65, 105, 99, 0.2), transparent 44rem),
-        #07090d;
+        radial-gradient(circle at 50% -20%, rgba(137, 165, 102, 0.32), transparent 44rem),
+        #263529;
       color: var(--ink);
       font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
@@ -80,15 +80,15 @@
       aspect-ratio: 16 / 9;
       border: 1px solid var(--line);
       border-radius: 12px;
-      background: #050609;
-      box-shadow: 0 28px 80px rgba(0, 0, 0, 0.48);
+      background: #263529;
+      box-shadow: 0 28px 80px rgba(12, 25, 14, 0.42);
     }
 
     #unity-canvas {
       display: block;
       width: 100%;
       height: 100%;
-      background: #050609;
+      background: #263529;
       outline: none;
       image-rendering: pixelated;
     }
@@ -100,7 +100,7 @@
       place-content: center;
       gap: 14px;
       padding: 24px;
-      background: #080a0f;
+      background: #2d3e2f;
       text-align: center;
       transition: opacity 320ms ease;
     }
@@ -153,7 +153,7 @@
       backdrop-filter: blur(12px);
     }
 
-    #fullscreen:hover { border-color: rgba(95, 208, 189, 0.48); }
+    #fullscreen:hover { border-color: rgba(230, 199, 111, 0.65); }
 
     #banner {
       display: none;
@@ -199,16 +199,16 @@
   <div class="page">
     <header>
       <div>
-        <span class="eyebrow">2D HORROR PROTOTYPE</span>
-        <h1>不要开门</h1>
+        <span class="eyebrow">种植 · 建造 · 探索</span>
+        <h1>ZHONG ZHI JIAN ZAO</h1>
       </div>
-      <p>旧公寓看起来很安静。用方向键走走看，也许有东西正在移动。</p>
+      <p>一片由你的像素素材生成的大世界。先四处走走，寻找湖泊、石地与自然形成的小路。</p>
     </header>
 
     <main id="game-shell">
       <canvas id="unity-canvas" tabindex="-1"></canvas>
       <div id="loading">
-        <div class="loading-title">正在进入公寓</div>
+        <div class="loading-title">正在生成世界</div>
         <div class="track"><div id="progress"></div></div>
         <div id="status">准备游戏文件…</div>
       </div>
