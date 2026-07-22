@@ -16,8 +16,7 @@ namespace DoNotOpen.Prototype
             Grass,
             GrassFlowers,
             Stone,
-            Water,
-            Path
+            Water
         }
 
         public int Seed { get; private set; } = 271828;
@@ -32,7 +31,7 @@ namespace DoNotOpen.Prototype
         private TopDownPlayer player;
         private Vector2Int currentChunk = new Vector2Int(int.MinValue, int.MinValue);
 
-        private static readonly int[] TileColumns = { 0, 1, 4, 6, 7 };
+        private static readonly int[] TileColumns = { 0, 1, 4, 6 };
 
         public void Initialize(Texture2D worldAtlas, TopDownPlayer controlledPlayer)
         {
@@ -87,14 +86,9 @@ namespace DoNotOpen.Prototype
 
         public GroundType GetGround(int worldX, int worldY)
         {
-            // Keep the initial clearing comfortable and guarantee a path through it.
+            // Keep the initial clearing comfortable and free of blocking water.
             if (Mathf.Abs(worldX) <= 7 && Mathf.Abs(worldY) <= 7)
             {
-                if (worldX == 0 || (worldY == -2 && worldX >= -7 && worldX <= 7))
-                {
-                    return GroundType.Path;
-                }
-
                 return Hash01(worldX, worldY, Seed + 19) < 0.16f
                     ? GroundType.GrassFlowers
                     : GroundType.Grass;
@@ -110,12 +104,6 @@ namespace DoNotOpen.Prototype
             if (stone > 0.68f)
             {
                 return GroundType.Stone;
-            }
-
-            float trail = FractalNoise(worldX * 0.018f, worldY * 0.018f, Seed + 701);
-            if (Mathf.Abs(trail - 0.5f) < 0.018f)
-            {
-                return GroundType.Path;
             }
 
             return Hash01(worldX, worldY, Seed + 919) < 0.18f
@@ -250,8 +238,10 @@ namespace DoNotOpen.Prototype
             vertices[vertex + 2] = new Vector3(right, top, 0f);
             vertices[vertex + 3] = new Vector3(right, bottom, 0f);
 
-            float insetX = 0.25f / atlas.width;
-            float insetY = 0.25f / atlas.height;
+            // Sample from texel centres so neighbouring atlas cells never bleed
+            // into one another when the camera moves between screen pixels.
+            float insetX = 0.5f / atlas.width;
+            float insetY = 0.5f / atlas.height;
             float uMin = atlasColumn * AtlasCellSize / (float)atlas.width + insetX;
             float uMax = (atlasColumn + 1) * AtlasCellSize / (float)atlas.width - insetX;
             float vMin = (atlas.height - AtlasCellSize) / (float)atlas.height + insetY;
