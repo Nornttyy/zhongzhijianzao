@@ -4,10 +4,8 @@ namespace DoNotOpen.Prototype
 {
     public sealed class PrototypeBootstrap : MonoBehaviour
     {
-        private const int VisionBlockerLayer = 8;
-
-        private static Sprite squareSprite;
-        private static Sprite circleSprite;
+        private const float MapPixelsPerUnit = 15f;
+        private const float PlayerPixelsPerUnit = 30f;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void EnsurePrototypeExists()
@@ -21,6 +19,7 @@ namespace DoNotOpen.Prototype
         private void Awake()
         {
             Application.targetFrameRate = 120;
+            QualitySettings.antiAliasing = 0;
             BuildCamera();
             BuildApartment();
             BuildPlayer();
@@ -40,57 +39,72 @@ namespace DoNotOpen.Prototype
 
             camera.transform.SetPositionAndRotation(new Vector3(0f, 0f, -10f), Quaternion.identity);
             camera.orthographic = true;
-            camera.orthographicSize = 7.5f;
+            camera.orthographicSize = 6f;
             camera.clearFlags = CameraClearFlags.SolidColor;
-            camera.backgroundColor = new Color(0.018f, 0.022f, 0.032f);
+            camera.backgroundColor = new Color32(15, 15, 23, 255);
         }
 
         private static void BuildApartment()
         {
-            Color floor = new Color(0.15f, 0.18f, 0.21f);
-            Color wall = new Color(0.36f, 0.43f, 0.46f);
-            Color trim = new Color(0.55f, 0.36f, 0.24f);
-            Color furniture = new Color(0.22f, 0.29f, 0.31f);
+            Texture2D mapTexture = Resources.Load<Texture2D>("PixelArt/apartment-map");
+            if (mapTexture == null)
+            {
+                Debug.LogError("Pixel art map could not be loaded.");
+                return;
+            }
 
-            CreateRect("Floor", Vector2.zero, new Vector2(22f, 14f), floor, 0, false);
+            ConfigurePixelTexture(mapTexture);
 
-            CreateWall("North Wall", new Vector2(0f, 6.75f), new Vector2(22.5f, 0.5f), wall);
-            CreateWall("South Wall", new Vector2(0f, -6.75f), new Vector2(22.5f, 0.5f), wall);
-            CreateWall("West Wall", new Vector2(-10.75f, 0f), new Vector2(0.5f, 14f), wall);
-            CreateWall("East Wall", new Vector2(10.75f, 0f), new Vector2(0.5f, 14f), wall);
+            GameObject map = new GameObject("Pixel Apartment Map");
+            SpriteRenderer renderer = map.AddComponent<SpriteRenderer>();
+            renderer.sprite = Sprite.Create(
+                mapTexture,
+                new Rect(0f, 0f, mapTexture.width, mapTexture.height),
+                Vector2.one * 0.5f,
+                MapPixelsPerUnit);
+            renderer.sortingOrder = 0;
 
-            // Two internal walls with generous door gaps make the occlusion easy to read.
-            CreateWall("Hall Wall A", new Vector2(-2f, -5f), new Vector2(0.4f, 3.5f), wall);
-            CreateWall("Hall Wall B", new Vector2(-2f, 0.5f), new Vector2(0.4f, 3f), wall);
-            CreateWall("Hall Wall C", new Vector2(-2f, 5.25f), new Vector2(0.4f, 3f), wall);
+            GameObject collisions = new GameObject("Apartment Collisions");
 
-            CreateWall("Bedroom Wall A", new Vector2(4f, -4.25f), new Vector2(0.4f, 5f), wall);
-            CreateWall("Bedroom Wall B", new Vector2(4f, 3.75f), new Vector2(0.4f, 5.5f), wall);
+            // Outer shell and the two sides of the central hallway.
+            AddPixelCollider(collisions.transform, "North Wall", 12, 10, 296, 6);
+            AddPixelCollider(collisions.transform, "South Wall", 12, 162, 296, 6);
+            AddPixelCollider(collisions.transform, "West Wall", 12, 10, 6, 158);
+            AddPixelCollider(collisions.transform, "East Wall", 302, 10, 6, 158);
+            AddPixelCollider(collisions.transform, "Hall Left South", 134, 10, 6, 33);
+            AddPixelCollider(collisions.transform, "Hall Left Centre", 134, 55, 6, 52);
+            AddPixelCollider(collisions.transform, "Hall Left North", 134, 119, 6, 49);
+            AddPixelCollider(collisions.transform, "Hall Right South", 180, 10, 6, 33);
+            AddPixelCollider(collisions.transform, "Hall Right Centre", 180, 55, 6, 52);
+            AddPixelCollider(collisions.transform, "Hall Right North", 180, 119, 6, 49);
+            AddPixelCollider(collisions.transform, "Left Divider", 12, 84, 122, 6);
+            AddPixelCollider(collisions.transform, "Right Divider", 186, 84, 122, 6);
 
-            CreateWall("Upper Room Wall A", new Vector2(-7.75f, 2f), new Vector2(5.5f, 0.4f), wall);
-            CreateWall("Upper Room Wall B", new Vector2(-3.25f, 2f), new Vector2(2.1f, 0.4f), wall);
-
-            CreateRect("Front Door", new Vector2(-2f, 3.35f), new Vector2(0.22f, 1.45f), trim, 6, false)
-                .AddComponent<ThreatPulse>();
-
-            CreateRect("Sofa", new Vector2(-7.3f, -4.7f), new Vector2(2.8f, 1.05f), furniture, 2, false);
-            CreateRect("Table", new Vector2(0.9f, -3.8f), new Vector2(1.6f, 1.6f), furniture, 2, false);
-            CreateRect("Bed", new Vector2(7.25f, 4.45f), new Vector2(3.2f, 1.9f), furniture, 2, false);
-            CreateRect("Breaker", new Vector2(10.35f, 1.7f), new Vector2(0.25f, 1.1f), trim, 6, false);
-
-            CreateSilhouette("Unknown Figure A", new Vector2(-6.2f, 4.5f));
-            CreateSilhouette("Unknown Figure B", new Vector2(1.2f, 4.8f));
-            CreateSilhouette("Unknown Figure C", new Vector2(7.3f, -3.7f));
+            // Furniture colliders match the large, readable pixel silhouettes.
+            AddPixelCollider(collisions.transform, "Sofa", 27, 24, 48, 17);
+            AddPixelCollider(collisions.transform, "Living Table", 48, 53, 34, 16);
+            AddPixelCollider(collisions.transform, "Cabinet", 113, 26, 11, 28);
+            AddPixelCollider(collisions.transform, "Bed", 250, 23, 36, 48);
+            AddPixelCollider(collisions.transform, "Nightstand", 226, 26, 15, 15);
+            AddPixelCollider(collisions.transform, "Kitchen Counter", 24, 99, 90, 16);
+            AddPixelCollider(collisions.transform, "Kitchen Table", 50, 126, 36, 24);
+            AddPixelCollider(collisions.transform, "Bath", 252, 99, 35, 49);
+            AddPixelCollider(collisions.transform, "Toilet", 207, 121, 20, 29);
         }
 
         private static void BuildPlayer()
         {
-            GameObject player = CreateCircle(
-                "Player",
-                new Vector2(-6.6f, -2.6f),
-                0.74f,
-                new Color(0.37f, 0.84f, 0.78f),
-                20);
+            Texture2D playerTexture = Resources.Load<Texture2D>("PixelArt/player-idle");
+            if (playerTexture == null)
+            {
+                Debug.LogError("Pixel art player could not be loaded.");
+                return;
+            }
+
+            ConfigurePixelTexture(playerTexture);
+
+            GameObject player = new GameObject("Player");
+            player.transform.position = new Vector3(0f, -3.65f, 0f);
 
             Rigidbody2D body = player.AddComponent<Rigidbody2D>();
             body.gravityScale = 0f;
@@ -99,127 +113,47 @@ namespace DoNotOpen.Prototype
             body.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
 
             CircleCollider2D collider = player.AddComponent<CircleCollider2D>();
-            collider.radius = 0.48f;
+            collider.radius = 0.29f;
+            collider.offset = new Vector2(0f, 0.12f);
+
+            GameObject visual = new GameObject("Single Frame Pixel Visual");
+            visual.transform.SetParent(player.transform, false);
+            SpriteRenderer renderer = visual.AddComponent<SpriteRenderer>();
+            renderer.sprite = Sprite.Create(
+                playerTexture,
+                new Rect(0f, 0f, playerTexture.width, playerTexture.height),
+                new Vector2(0.5f, 0.12f),
+                PlayerPixelsPerUnit);
+            renderer.sortingOrder = 20;
 
             TopDownPlayer controller = player.AddComponent<TopDownPlayer>();
-            controller.Speed = 4.6f;
-
-            GameObject facing = CreateRect(
-                "Facing",
-                Vector2.zero,
-                new Vector2(0.36f, 0.12f),
-                new Color(1f, 0.82f, 0.36f),
-                21,
-                false);
-            facing.transform.SetParent(player.transform, false);
-            facing.transform.localPosition = new Vector3(0.48f, 0f, 0f);
-            controller.FacingMarker = facing.transform;
-
-            GameObject visionObject = new GameObject("Local Vision");
-            visionObject.transform.SetParent(player.transform, false);
-            VisionMask vision = visionObject.AddComponent<VisionMask>();
-            vision.Radius = 6.1f;
-            vision.ObstacleMask = 1 << VisionBlockerLayer;
+            controller.Speed = 3.8f;
+            controller.ConfigureVisual(visual.transform, renderer);
         }
 
-        private static void CreateSilhouette(string name, Vector2 position)
+        private static void ConfigurePixelTexture(Texture2D texture)
         {
-            GameObject figure = CreateCircle(name, position, 0.68f, new Color(0.65f, 0.18f, 0.21f), 12);
-            CreateRect(name + " Shadow", position + new Vector2(0f, -0.58f), new Vector2(0.75f, 0.65f),
-                new Color(0.29f, 0.08f, 0.11f), 11, false);
-            figure.AddComponent<SilhouetteSway>();
+            texture.filterMode = FilterMode.Point;
+            texture.wrapMode = TextureWrapMode.Clamp;
         }
 
-        private static void CreateWall(string name, Vector2 position, Vector2 size, Color color)
-        {
-            GameObject wall = CreateRect(name, position, size, color, 5, true);
-            wall.layer = VisionBlockerLayer;
-        }
-
-        private static GameObject CreateRect(
+        private static void AddPixelCollider(
+            Transform parent,
             string name,
-            Vector2 position,
-            Vector2 size,
-            Color color,
-            int sortingOrder,
-            bool addCollider)
+            int x,
+            int y,
+            int width,
+            int height)
         {
-            EnsureSprites();
             GameObject item = new GameObject(name);
-            item.transform.position = position;
-            item.transform.localScale = new Vector3(size.x, size.y, 1f);
+            item.transform.SetParent(parent, false);
 
-            SpriteRenderer renderer = item.AddComponent<SpriteRenderer>();
-            renderer.sprite = squareSprite;
-            renderer.color = color;
-            renderer.sortingOrder = sortingOrder;
+            float centerX = (x + width * 0.5f - 160f) / MapPixelsPerUnit;
+            float centerY = (90f - (y + height * 0.5f)) / MapPixelsPerUnit;
+            item.transform.position = new Vector3(centerX, centerY, 0f);
 
-            if (addCollider)
-            {
-                item.AddComponent<BoxCollider2D>();
-            }
-
-            return item;
-        }
-
-        private static GameObject CreateCircle(
-            string name,
-            Vector2 position,
-            float size,
-            Color color,
-            int sortingOrder)
-        {
-            EnsureSprites();
-            GameObject item = new GameObject(name);
-            item.transform.position = position;
-            item.transform.localScale = Vector3.one * size;
-
-            SpriteRenderer renderer = item.AddComponent<SpriteRenderer>();
-            renderer.sprite = circleSprite;
-            renderer.color = color;
-            renderer.sortingOrder = sortingOrder;
-            return item;
-        }
-
-        private static void EnsureSprites()
-        {
-            if (squareSprite != null && circleSprite != null)
-            {
-                return;
-            }
-
-            Texture2D square = new Texture2D(1, 1, TextureFormat.RGBA32, false)
-            {
-                name = "Runtime Square",
-                filterMode = FilterMode.Point
-            };
-            square.SetPixel(0, 0, Color.white);
-            square.Apply();
-            squareSprite = Sprite.Create(square, new Rect(0f, 0f, 1f, 1f), Vector2.one * 0.5f, 1f);
-
-            const int size = 32;
-            Texture2D circle = new Texture2D(size, size, TextureFormat.RGBA32, false)
-            {
-                name = "Runtime Circle",
-                filterMode = FilterMode.Bilinear
-            };
-
-            Color[] pixels = new Color[size * size];
-            Vector2 center = Vector2.one * (size - 1f) * 0.5f;
-            float radius = size * 0.48f;
-            for (int y = 0; y < size; y++)
-            {
-                for (int x = 0; x < size; x++)
-                {
-                    float distance = Vector2.Distance(new Vector2(x, y), center);
-                    float alpha = Mathf.Clamp01(radius - distance);
-                    pixels[y * size + x] = new Color(1f, 1f, 1f, alpha);
-                }
-            }
-
-            circle.SetPixels(pixels);
-            circle.Apply();
-            circleSprite = Sprite.Create(circle, new Rect(0f, 0f, size, size), Vector2.one * 0.5f, size);
+            BoxCollider2D collider = item.AddComponent<BoxCollider2D>();
+            collider.size = new Vector2(width / MapPixelsPerUnit, height / MapPixelsPerUnit);
         }
     }
 }

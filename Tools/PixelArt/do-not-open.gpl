@@ -1,0 +1,20 @@
+GIMP Palette
+Name: Do Not Open 16
+Columns: 4
+# Fixed palette for the apartment and player
+ 11  13  20	Void
+ 20  19  27	Shadow
+ 35  25  29	Ink
+ 59  42  45	Wall Dark
+ 96  67  69	Wall
+137 102  99	Wall Light
+ 64  47  50	Wood Dark
+ 79  59  56	Wood
+ 56  70  78	Tile Dark
+ 76  93 101	Tile
+ 49  81  88	Teal
+ 69 105 110	Teal Light
+184 162 139	Cream
+210 168  92	Amber
+123  54  63	Rust
+215 170 130	Skin

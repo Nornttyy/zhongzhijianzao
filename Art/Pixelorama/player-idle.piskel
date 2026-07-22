@@ -1,0 +1,13 @@
+{
+  "modelVersion": 2,
+  "piskel": {
+    "name": "Do Not Open - Player Idle",
+    "description": "Hand-authored fixed-palette pixel art for Do Not Open",
+    "fps": 12,
+    "height": 40,
+    "width": 32,
+    "layers": [
+      "{\"name\":\"Player\",\"opacity\":1,\"frameCount\":1,\"chunks\":[{\"layout\":[[0]],\"base64PNG\":\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAoCAYAAACfKfiZAAAAw0lEQVR42mNgGAVDCShLyv4nBg8vBzjoG/2nBI86YMAsptghg9oB11c1YWC6OACbxcQ6hqw8T6yFhDBZZQMuB+BzGD49FJV6lPic7NJxwB1AjbRAlXqB2AqIZhXTgDsA5gjDwAgwds3Mw4th6qjue3IcQJUECDMQFyakZtQBw9cBnWnJKA6A8UejgOoOgJXrpDqAKvXBgDuAmKjAJUfVHhKsSE1wdkXByMUtNjmq9wtxWTLqALo5AFeDgy7d9FEHDFsAAOj4K0UVH0UlAAAAAElFTkSuQmCC\"}]}"
+    ]
+  }
+}
