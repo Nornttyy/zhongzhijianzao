@@ -11,6 +11,13 @@
 
 测试地图、玩家和视野会在运行时自动生成，因此无需拖放组件。
 
+## 网页版本
+
+网页构建使用 `Assets/WebGLTemplates/DoNotOpen` 模板。安装 Unity Web Build Support 后，
+可以在编辑器菜单选择 `Do Not Open > Build Web Version` 生成 WebGL 文件。
+
+线上试玩地址：<https://nornttyy.github.io/senzhidiyu/do-not-open/>
+
 ## 当前范围
 
 - 纯2D俯视角移动
