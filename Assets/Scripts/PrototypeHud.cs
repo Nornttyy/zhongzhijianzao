@@ -54,7 +54,7 @@ namespace DoNotOpen.Prototype
 
             GUI.Box(new Rect(18f, 18f, 240f, 62f), GUIContent.none);
             GUI.Label(new Rect(32f, 27f, 212f, 25f), "种植建造", titleStyle);
-            GUI.Label(new Rect(32f, 55f, 212f, 20f), "WASD 移动 · 右键互动 · R 返回", bodyStyle);
+            GUI.Label(new Rect(32f, 55f, 212f, 20f), "WASD 移动 · R 返回", bodyStyle);
 
             Vector2Int tile = world.WorldToTile(player.transform.position);
             string coordinates = world.IsInCave
@@ -197,7 +197,7 @@ namespace DoNotOpen.Prototype
 
             GUI.Label(
                 new Rect(card.x + 20f, card.y + 270f, card.width - 40f, 28f),
-                "WASD 移动 · 右键互动 · R 返回",
+                "WASD 移动 · R 返回",
                 menuControlsStyle);
             GUI.color = Color.white;
         }
