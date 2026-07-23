@@ -639,12 +639,23 @@ namespace DoNotOpen.Prototype
                 return false;
             }
 
-            for (int y = -1; y <= 1; y++)
+            int minTileX = Mathf.FloorToInt(position.x - radius + 0.5f);
+            int maxTileX = Mathf.FloorToInt(position.x + radius + 0.5f);
+            int minTileY = Mathf.FloorToInt(position.y - radius + 0.5f);
+            int maxTileY = Mathf.FloorToInt(position.y + radius + 0.5f);
+            for (int y = minTileY; y <= maxTileY; y++)
             {
-                for (int x = -1; x <= 1; x++)
+                for (int x = minTileX; x <= maxTileX; x++)
                 {
-                    Vector2 sample = position + new Vector2(x * radius, y * radius);
-                    if (!IsCaveWalkable(sample))
+                    if (IsCaveWalkableTile(x, y))
+                    {
+                        continue;
+                    }
+
+                    float nearestX = Mathf.Clamp(position.x, x - 0.5f, x + 0.5f);
+                    float nearestY = Mathf.Clamp(position.y, y - 0.5f, y + 0.5f);
+                    Vector2 nearestPoint = new Vector2(nearestX, nearestY);
+                    if ((position - nearestPoint).sqrMagnitude < radius * radius)
                     {
                         return false;
                     }
@@ -950,13 +961,6 @@ namespace DoNotOpen.Prototype
                     queue.Enqueue(next);
                 }
             }
-        }
-
-        private bool IsCaveWalkable(Vector2 position)
-        {
-            return IsCaveWalkableTile(
-                Mathf.FloorToInt(position.x + 0.5f),
-                Mathf.FloorToInt(position.y + 0.5f));
         }
 
         private bool IsCaveWalkableTile(int x, int y)
