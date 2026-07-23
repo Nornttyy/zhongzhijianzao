@@ -102,7 +102,8 @@ namespace DoNotOpen.Prototype
         {
             if (PlayerSprite != null)
             {
-                PlayerSprite.sortingOrder = 320 - Mathf.RoundToInt(transform.position.y * 10f);
+                PlayerSprite.sortingOrder =
+                    ProceduralWorld.GetSurfaceSortingOrder(transform.position.y);
                 if (waterSplashRenderer != null)
                 {
                     waterSplashRenderer.sortingOrder = PlayerSprite.sortingOrder + 1;
