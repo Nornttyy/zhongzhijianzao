@@ -254,17 +254,16 @@ namespace DoNotOpen.Prototype
             moveBlend = Mathf.MoveTowards(moveBlend, targetBlend, Time.deltaTime * 7f);
             if (targetBlend > 0f)
             {
-                // A quick, rhythmic hop with a small side-to-side step. The
-                // sprite keeps its proportions throughout; motion is made
-                // only with position offsets so it never looks squashed.
+                // A quick, rhythmic hop with a tiny left/right tilt. The
+                // sprite keeps its proportions throughout; the motion is
+                // expressed with position and rotation, never squash/stretch.
                 bouncePhase += Time.deltaTime * 15.5f;
             }
 
             float hop = (1f - Mathf.Cos(bouncePhase)) * 0.5f * moveBlend;
-            float sideStep = Mathf.Sin(bouncePhase) * moveBlend;
-            VisualRoot.localPosition = visualOrigin
-                + Vector3.up * (hop * 0.085f)
-                + Vector3.right * (sideStep * 0.045f);
+            float tilt = Mathf.Sin(bouncePhase) * 3f * moveBlend;
+            VisualRoot.localPosition = visualOrigin + Vector3.up * (hop * 0.085f);
+            VisualRoot.localRotation = Quaternion.Euler(0f, 0f, tilt);
             VisualRoot.localScale = visualScale;
         }
 
