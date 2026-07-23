@@ -83,9 +83,7 @@
 
     #menu {
       z-index: 6;
-      background:
-        linear-gradient(rgba(18, 38, 23, 0.18), rgba(18, 38, 23, 0.68)),
-        linear-gradient(to bottom, #8fd8d2 0%, #c0e9ad 54%, #68c45b 54%, #57b94d 100%);
+      background: linear-gradient(to bottom, #6cc3ea 0%, #c3efff 56%, #8bd47e 56%, #6abe5c 100%);
       align-items: flex-start;
       padding-top: clamp(20px, 5vh, 58px);
       padding-bottom: 34vh;
@@ -97,27 +95,16 @@
       top: 8%;
       left: 10%;
       width: 84px;
-      height: 84px;
+      height: 24px;
       content: "";
-      background: #f6d86f;
+      background: #ffffff;
       box-shadow:
-        12px 0 0 #f6d86f,
-        24px 0 0 #f6d86f,
-        0 12px 0 #f6d86f,
-        12px 12px 0 #f6d86f,
-        24px 12px 0 #f6d86f,
-        12px 24px 0 #f6d86f,
-        24px 24px 0 #f6d86f,
-        36px 24px 0 #f6d86f,
-        48px 24px 0 #f6d86f,
-        24px 36px 0 #f6d86f,
-        36px 36px 0 #f6d86f,
-        48px 36px 0 #f6d86f,
-        36px 48px 0 #f6d86f,
-        48px 48px 0 #f6d86f;
-      opacity: 0.8;
-      transform: scale(0.5);
-      transform-origin: top left;
+        12px -12px 0 #ffffff,
+        24px -12px 0 #ffffff,
+        36px 0 0 #ffffff,
+        48px 0 0 #ffffff,
+        60px 12px 0 #ffffff;
+      opacity: 0.86;
     }
 
     #menu::after {
@@ -128,22 +115,8 @@
       z-index: 0;
       height: 38%;
       content: "";
-      background:
-        repeating-linear-gradient(
-          90deg,
-          rgba(38, 143, 56, 0.14) 0,
-          rgba(38, 143, 56, 0.14) 6px,
-          transparent 6px,
-          transparent 18px
-        ),
-        repeating-linear-gradient(
-          0deg,
-          #55b84d 0,
-          #55b84d 12px,
-          #61c554 12px,
-          #61c554 24px
-        );
-      box-shadow: inset 0 6px 0 rgba(31, 120, 49, 0.32);
+      background: #62c457;
+      box-shadow: inset 0 6px 0 rgba(31, 120, 49, 0.32), inset 0 12px 0 rgba(137, 220, 113, 0.35);
     }
 
     .menu-scene {
@@ -155,23 +128,28 @@
       height: 38%;
       overflow: hidden;
       pointer-events: none;
+      background: url("grass-preview.png") repeat;
+      background-size: 12px 12px;
+      animation: grass-scroll 2.4s steps(12, end) infinite;
     }
 
-    .menu-tuft {
+    .menu-cloud {
       position: absolute;
-      bottom: 17%;
-      width: 6px;
-      height: 18px;
-      background: #3c9f3d;
-      box-shadow: 6px 6px 0 #3c9f3d;
-      opacity: 0.85;
-      transform: skewX(-12deg);
+      z-index: 0;
+      width: 92px;
+      height: 20px;
+      background: #ffffff;
+      box-shadow: 12px -10px 0 #ffffff, 24px -10px 0 #ffffff, 36px 0 0 #ffffff;
+      opacity: 0.72;
+      pointer-events: none;
     }
 
-    .menu-tuft.one { left: 12%; }
-    .menu-tuft.two { left: 27%; bottom: 28%; transform: scale(0.75) skewX(-12deg); }
-    .menu-tuft.three { right: 24%; bottom: 24%; transform: scale(0.9) skewX(-12deg); }
-    .menu-tuft.four { right: 10%; }
+    .menu-cloud.cloud-two { top: 23%; right: 13%; transform: scale(0.72); }
+
+    @keyframes grass-scroll {
+      from { background-position: 0 0; }
+      to { background-position: -96px 0; }
+    }
 
     .menu-character {
       position: absolute;
@@ -180,7 +158,8 @@
       width: 48px;
       height: 62px;
       image-rendering: pixelated;
-      animation: menu-walk 5.6s steps(12, end) infinite;
+      transform: translateX(-50%);
+      animation: menu-bob 720ms steps(2, end) infinite alternate;
     }
 
     .menu-player-shadow {
@@ -203,11 +182,9 @@
       image-rendering: pixelated;
     }
 
-    @keyframes menu-walk {
-      0%, 100% { transform: translateX(-50%) translateY(0); }
-      25% { transform: translateX(calc(-50% - 84px)) translateY(-3px); }
-      50% { transform: translateX(calc(-50% + 84px)) translateY(0) scaleX(-1); }
-      75% { transform: translateX(calc(-50% - 84px)) translateY(-3px) scaleX(-1); }
+    @keyframes menu-bob {
+      from { transform: translateX(-50%) translateY(0); }
+      to { transform: translateX(-50%) translateY(-6px); }
     }
 
     #menu.hidden {
@@ -419,11 +396,8 @@
     <canvas id="unity-canvas" tabindex="-1"></canvas>
 
     <section id="menu" aria-label="主界面">
+      <div class="menu-cloud cloud-two" aria-hidden="true"></div>
       <div class="menu-scene" aria-hidden="true">
-        <i class="menu-tuft one"></i>
-        <i class="menu-tuft two"></i>
-        <i class="menu-tuft three"></i>
-        <i class="menu-tuft four"></i>
         <div class="menu-character">
           <div class="menu-player-shadow"></div>
           <div class="menu-player"></div>
@@ -468,7 +442,7 @@
 
     // 每次发布都更换版本号，避免 UnityCache/浏览器继续使用旧的同名构建文件。
     const buildUrl = "Build";
-    const buildVersion = "20260723-mainmenu2";
+    const buildVersion = "20260723-mainmenu3";
     const assetUrl = file => buildUrl + "/" + file + "?v=" + buildVersion;
     const loaderUrl = assetUrl("{{{ LOADER_FILENAME }}}");
     const config = {
