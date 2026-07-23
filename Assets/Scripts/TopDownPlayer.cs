@@ -5,6 +5,9 @@ namespace DoNotOpen.Prototype
     [RequireComponent(typeof(Rigidbody2D))]
     public sealed class TopDownPlayer : MonoBehaviour
     {
+        private const float MovementRadius = 0.2f;
+        private const float BoundaryMargin = 0.22f;
+
         public float Speed { get; set; } = 3.6f;
         public float SwimSpeedMultiplier { get; set; } = 0.45f;
         public Transform VisualRoot { get; private set; }
@@ -253,18 +256,18 @@ namespace DoNotOpen.Prototype
             if (World != null)
             {
                 Vector2 horizontal = new Vector2(next.x, body.position.y);
-                if (World.CanStandAt(horizontal, 0.24f))
+                if (World.CanStandAt(horizontal, MovementRadius))
                 {
                     body.position = horizontal;
                 }
 
                 Vector2 vertical = new Vector2(body.position.x, next.y);
-                if (World.CanStandAt(vertical, 0.24f))
+                if (World.CanStandAt(vertical, MovementRadius))
                 {
                     body.position = vertical;
                 }
 
-                body.position = World.ClampToBounds(body.position, 0.3f);
+                body.position = World.ClampToBounds(body.position, BoundaryMargin);
                 SetSwimming(World.IsWaterAt(body.position));
                 body.linearVelocity = Vector2.zero;
                 return;

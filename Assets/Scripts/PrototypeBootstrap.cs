@@ -74,8 +74,8 @@ namespace DoNotOpen.Prototype
             body.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
 
             CircleCollider2D collider = player.AddComponent<CircleCollider2D>();
-            collider.radius = 0.27f;
-            collider.offset = new Vector2(0f, 0.25f);
+            collider.radius = 0.2f;
+            collider.offset = new Vector2(0f, 0.22f);
 
             GameObject visual = new GameObject("Player Art");
             visual.transform.SetParent(player.transform, false);
