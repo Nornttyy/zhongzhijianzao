@@ -65,16 +65,17 @@ namespace DoNotOpen.Prototype
 
         public bool CanStandAt(Vector2 position, float radius)
         {
-            if (!MapBounds.Contains(new Vector3(position.x, position.y, 0f)))
-            {
-                return false;
-            }
+            return ContainsPosition(position) &&
+                   ContainsPosition(position + Vector2.left * radius) &&
+                   ContainsPosition(position + Vector2.right * radius) &&
+                   ContainsPosition(position + Vector2.up * radius) &&
+                   ContainsPosition(position + Vector2.down * radius);
+        }
 
-            return IsWalkable(WorldToTile(position)) &&
-                   IsWalkable(WorldToTile(position + Vector2.left * radius)) &&
-                   IsWalkable(WorldToTile(position + Vector2.right * radius)) &&
-                   IsWalkable(WorldToTile(position + Vector2.up * radius)) &&
-                   IsWalkable(WorldToTile(position + Vector2.down * radius));
+        public bool IsWaterAt(Vector2 position)
+        {
+            Vector2Int tile = WorldToTile(position);
+            return GetGround(tile.x, tile.y) == GroundType.Water;
         }
 
         public Vector2 ClampToBounds(Vector2 position, float margin)
@@ -111,15 +112,9 @@ namespace DoNotOpen.Prototype
                 : GroundType.Grass;
         }
 
-        private bool IsWalkable(Vector2Int tile)
+        private bool ContainsPosition(Vector2 position)
         {
-            if (tile.x < MapBounds.min.x || tile.x > MapBounds.max.x ||
-                tile.y < MapBounds.min.y || tile.y > MapBounds.max.y)
-            {
-                return false;
-            }
-
-            return GetGround(tile.x, tile.y) != GroundType.Water;
+            return MapBounds.Contains(new Vector3(position.x, position.y, 0f));
         }
 
         private void RefreshChunks(bool force)
