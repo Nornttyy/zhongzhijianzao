@@ -25,7 +25,7 @@ namespace DoNotOpen.Prototype
         private const float CaveHintDistance = 3.6f;
         private const int SurfaceSortingBase = 20000;
         private const float SurfaceSortingScale = 0.1f;
-        private const float CaveFloorBrightness = 0.92f;
+        private const float CaveFloorBrightness = 1f;
         private const float CaveWallBrightness = 0.42f;
         private const int CaveFloorWidth = 49;
         private const int CaveFloorHeight = 37;
@@ -101,7 +101,7 @@ namespace DoNotOpen.Prototype
                 color = new Color(
                     CaveFloorBrightness,
                     CaveFloorBrightness,
-                    CaveFloorBrightness * 0.96f,
+                    CaveFloorBrightness,
                     1f)
             };
 
