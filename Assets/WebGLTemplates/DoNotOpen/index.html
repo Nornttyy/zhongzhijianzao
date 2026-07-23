@@ -275,6 +275,7 @@
     document.body.appendChild(loader);
 
     canvas.addEventListener("pointerdown", () => canvas.focus());
+    canvas.addEventListener("contextmenu", event => event.preventDefault());
     fullscreen.addEventListener("click", () => unityInstance?.SetFullscreen(1));
   </script>
 </body>

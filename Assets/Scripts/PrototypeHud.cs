@@ -9,6 +9,7 @@ namespace DoNotOpen.Prototype
         private GUIStyle titleStyle;
         private GUIStyle bodyStyle;
         private GUIStyle coordinateStyle;
+        private GUIStyle interactionStyle;
 
         public void Initialize(ProceduralWorld generatedWorld, TopDownPlayer controlledPlayer)
         {
@@ -32,11 +33,34 @@ namespace DoNotOpen.Prototype
             GUI.Label(new Rect(34f, 96f, 245f, 20f), "R   Return to start", bodyStyle);
 
             Vector2Int tile = world.WorldToTile(player.transform.position);
-            string coordinates = "X " + tile.x.ToString("N0") + "    Y " + tile.y.ToString("N0");
+            string coordinates = world.IsInCave
+                ? "CAVE"
+                : "X " + tile.x.ToString("N0") + "    Y " + tile.y.ToString("N0");
             Vector2 size = coordinateStyle.CalcSize(new GUIContent(coordinates));
             Rect panel = new Rect((Screen.width - size.x) * 0.5f - 14f, Screen.height - 56f, size.x + 28f, 38f);
             GUI.Box(panel, GUIContent.none);
             GUI.Label(new Rect(panel.x + 14f, panel.y + 7f, size.x, 24f), coordinates, coordinateStyle);
+
+            string interaction = world.GetInteractionHint(player.transform.position);
+            if (!string.IsNullOrEmpty(interaction))
+            {
+                Vector2 hintSize = interactionStyle.CalcSize(new GUIContent(interaction));
+                float hintPanelWidth = Mathf.Max(hintSize.x + 40f, 360f);
+                Rect hintPanel = new Rect(
+                    (Screen.width - hintPanelWidth) * 0.5f,
+                    Screen.height - 102f,
+                    hintPanelWidth,
+                    34f);
+                GUI.Box(hintPanel, GUIContent.none);
+                GUI.Label(
+                    new Rect(
+                        hintPanel.x + 14f,
+                        hintPanel.y + 5f,
+                        hintPanel.width - 28f,
+                        24f),
+                    interaction,
+                    interactionStyle);
+            }
         }
 
         private void EnsureStyles()
@@ -64,6 +88,13 @@ namespace DoNotOpen.Prototype
                 fontSize = 15,
                 fontStyle = FontStyle.Bold,
                 alignment = TextAnchor.MiddleCenter
+            };
+
+            interactionStyle = new GUIStyle(coordinateStyle)
+            {
+                fontSize = 13,
+                wordWrap = false,
+                normal = { textColor = new Color(0.98f, 0.89f, 0.48f) }
             };
         }
     }

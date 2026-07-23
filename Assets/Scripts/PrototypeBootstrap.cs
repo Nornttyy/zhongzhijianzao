@@ -22,8 +22,9 @@ namespace DoNotOpen.Prototype
 
             Texture2D worldTexture = LoadPixelTexture("PixelArt/world-tiles");
             Texture2D playerTexture = LoadPixelTexture("PixelArt/player-idle");
+            Texture2D caveEntranceTexture = LoadPixelTexture("PixelArt/cave-entrance");
 
-            if (worldTexture == null || playerTexture == null)
+            if (worldTexture == null || playerTexture == null || caveEntranceTexture == null)
             {
                 Debug.LogError("One or more cozy farm pixel-art sheets could not be loaded.");
                 return;
@@ -33,7 +34,7 @@ namespace DoNotOpen.Prototype
             TopDownPlayer player = BuildPlayer(playerTexture);
 
             ProceduralWorld world = gameObject.AddComponent<ProceduralWorld>();
-            world.Initialize(worldTexture, player);
+            world.Initialize(worldTexture, caveEntranceTexture, player);
             player.World = world;
 
             CameraFollow follow = camera.gameObject.AddComponent<CameraFollow>();

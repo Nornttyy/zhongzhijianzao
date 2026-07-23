@@ -71,7 +71,7 @@ namespace DoNotOpen.Prototype
 
             if (World != null)
             {
-                SetSwimming(World.ShouldSwimAt(body.position, IsSwimming));
+                SetSwimming(World.ShouldSwimAt(body.position));
             }
 
             UpdateBounce();
@@ -79,9 +79,23 @@ namespace DoNotOpen.Prototype
 
             if (Input.GetKeyDown(KeyCode.R))
             {
-                body.position = spawnPosition;
-                body.linearVelocity = Vector2.zero;
+                if (World != null && World.IsInCave)
+                {
+                    World.ExitCave();
+                }
+                else
+                {
+                    Teleport(spawnPosition);
+                }
             }
+        }
+
+        public void Teleport(Vector2 position)
+        {
+            body.position = position;
+            transform.position = position;
+            body.linearVelocity = Vector2.zero;
+            SetSwimming(false);
         }
 
         private void LateUpdate()
@@ -268,7 +282,7 @@ namespace DoNotOpen.Prototype
                 }
 
                 body.position = World.ClampToBounds(body.position, BoundaryMargin);
-                SetSwimming(World.ShouldSwimAt(body.position, IsSwimming));
+                SetSwimming(World.ShouldSwimAt(body.position));
                 body.linearVelocity = Vector2.zero;
                 return;
             }
