@@ -23,6 +23,8 @@ namespace DoNotOpen.Prototype
         private const float CaveChunkChance = 0.45f;
         private const float CaveInteractionDistance = 2.35f;
         private const float CaveHintDistance = 3.6f;
+        // 矿洞内容暂时停用，等主菜单和地表玩法调整完成后再重新开启。
+        private static readonly bool EnableCaves = false;
         private const int SurfaceSortingBase = 20000;
         private const float SurfaceSortingScale = 0.1f;
         private const float CaveFloorBrightness = 1f;
@@ -129,7 +131,7 @@ namespace DoNotOpen.Prototype
 
         private void Update()
         {
-            if (Input.GetMouseButtonDown(1))
+            if (EnableCaves && Input.GetMouseButtonDown(1))
             {
                 HandleCaveInteraction();
             }
@@ -523,7 +525,8 @@ namespace DoNotOpen.Prototype
 
         private void PopulateCaveEntrance(Transform chunk, Vector2Int coordinate)
         {
-            if (caveEntranceSprite == null ||
+            if (!EnableCaves ||
+                caveEntranceSprite == null ||
                 !TryGetCaveAnchor(coordinate, out Vector2Int worldAnchor))
             {
                 return;
@@ -553,6 +556,11 @@ namespace DoNotOpen.Prototype
             out Vector2Int worldAnchor)
         {
             worldAnchor = default;
+            if (!EnableCaves)
+            {
+                return false;
+            }
+
             if (Hash01(coordinate.x, coordinate.y, Seed + 8068) <
                 1f - CaveChunkChance)
             {
