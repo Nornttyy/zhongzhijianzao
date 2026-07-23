@@ -323,17 +323,20 @@
     const banner = document.querySelector("#banner");
     const fullscreen = document.querySelector("#fullscreen");
 
+    // 每次发布都更换版本号，避免 UnityCache/浏览器继续使用旧的同名构建文件。
     const buildUrl = "Build";
-    const loaderUrl = buildUrl + "/docs.loader.js";
+    const buildVersion = "20260723-colorfix2";
+    const assetUrl = file => buildUrl + "/" + file + "?v=" + buildVersion;
+    const loaderUrl = assetUrl("docs.loader.js");
     const config = {
       arguments: [],
-      dataUrl: buildUrl + "/docs.data.unityweb",
-      frameworkUrl: buildUrl + "/docs.framework.js.unityweb",
-      codeUrl: buildUrl + "/docs.wasm.unityweb",
+      dataUrl: assetUrl("docs.data.unityweb"),
+      frameworkUrl: assetUrl("docs.framework.js.unityweb"),
+      codeUrl: assetUrl("docs.wasm.unityweb"),
       streamingAssetsUrl: "StreamingAssets",
       companyName: "Nornttyy",
       productName: "Zhong Zhi Jian Zao",
-      productVersion: "0.1.0",
+      productVersion: "0.1.0-colorfix2",
       devicePixelRatio: Math.min(window.devicePixelRatio || 1, 2),
       showBanner(message, type) {
         banner.textContent = message;
