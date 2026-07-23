@@ -22,15 +22,15 @@ namespace DoNotOpen.Prototype
         private const float CavePixelsPerUnit = 12f;
         private const float CaveChunkChance = 0.45f;
         private const float CaveInteractionDistance = 2.35f;
-        private const int CaveFloorWidth = 15;
-        private const int CaveFloorHeight = 11;
+        private const int CaveFloorWidth = 49;
+        private const int CaveFloorHeight = 37;
 
         private static readonly Bounds CaveWalkBounds = new Bounds(
             Vector3.zero,
-            new Vector3(13f, 9f, 1f));
+            new Vector3(47f, 35f, 1f));
 
-        private static readonly Vector2 CaveSpawnPosition = new Vector2(0f, -2.75f);
-        private static readonly Vector2 CaveExitBottom = new Vector2(0f, -5.35f);
+        private static readonly Vector2 CaveSpawnPosition = new Vector2(0f, -15.75f);
+        private static readonly Vector2 CaveExitBottom = new Vector2(0f, -18.35f);
 
         public enum GroundType
         {
@@ -832,12 +832,14 @@ namespace DoNotOpen.Prototype
                 return;
             }
 
-            for (int y = -3; y <= 3; y++)
+            int halfWidth = CaveFloorWidth / 2;
+            int halfHeight = CaveFloorHeight / 2;
+            for (int y = -halfHeight + 2; y <= halfHeight - 2; y++)
             {
-                for (int x = -5; x <= 5; x++)
+                for (int x = -halfWidth + 2; x <= halfWidth - 2; x++)
                 {
-                    if ((Mathf.Abs(x) <= 1 && y <= -1) ||
-                        Hash01(x, y, Seed + 12101) >= 0.13f)
+                    if ((Mathf.Abs(x) <= 2 && y <= -11) ||
+                        Hash01(x, y, Seed + 12101) >= 0.045f)
                     {
                         continue;
                     }
