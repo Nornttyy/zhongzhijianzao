@@ -13,6 +13,21 @@ namespace DoNotOpen.Prototype
         private const int AtlasCellSize = 12;
         private const float WaterFrameDuration = 0.55f;
         private const float DecorationChance = 0.11f;
+        private const int SwimEntryWaterSamples = 7;
+        private const int SwimStayWaterSamples = 3;
+
+        private static readonly Vector2[] SwimSampleOffsets =
+        {
+            Vector2.zero,
+            new Vector2(-0.28f, 0f),
+            new Vector2(0.28f, 0f),
+            new Vector2(0f, -0.28f),
+            new Vector2(0f, 0.28f),
+            new Vector2(-0.2f, -0.2f),
+            new Vector2(-0.2f, 0.2f),
+            new Vector2(0.2f, -0.2f),
+            new Vector2(0.2f, 0.2f)
+        };
 
         public enum GroundType
         {
@@ -90,6 +105,27 @@ namespace DoNotOpen.Prototype
         {
             Vector2Int tile = WorldToTile(position);
             return GetGround(tile.x, tile.y) == GroundType.Water;
+        }
+
+        public bool ShouldSwimAt(Vector2 position, bool currentlySwimming)
+        {
+            int waterSamples = 0;
+            for (int i = 0; i < SwimSampleOffsets.Length; i++)
+            {
+                if (IsWaterAt(position + SwimSampleOffsets[i]))
+                {
+                    waterSamples++;
+                }
+            }
+
+            // 进入水中时要求脚下大部分范围都在水里，避免刚碰到岸边就开始游泳。
+            if (!currentlySwimming)
+            {
+                return waterSamples >= SwimEntryWaterSamples;
+            }
+
+            // 离开水面时保留一点缓冲，防止状态在岸边反复切换。
+            return IsWaterAt(position) && waterSamples >= SwimStayWaterSamples;
         }
 
         public Vector2 ClampToBounds(Vector2 position, float margin)

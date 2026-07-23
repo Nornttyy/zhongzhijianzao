@@ -71,7 +71,7 @@ namespace DoNotOpen.Prototype
 
             if (World != null)
             {
-                SetSwimming(World.IsWaterAt(body.position));
+                SetSwimming(World.ShouldSwimAt(body.position, IsSwimming));
             }
 
             UpdateBounce();
@@ -268,7 +268,7 @@ namespace DoNotOpen.Prototype
                 }
 
                 body.position = World.ClampToBounds(body.position, BoundaryMargin);
-                SetSwimming(World.IsWaterAt(body.position));
+                SetSwimming(World.ShouldSwimAt(body.position, IsSwimming));
                 body.linearVelocity = Vector2.zero;
                 return;
             }
