@@ -10,13 +10,16 @@ namespace DoNotOpen.Prototype
         public const int ChunkSize = 16;
 
         private const int LoadRadius = 1;
-        private const int AtlasCellSize = 32;
+        private const int AtlasCellSize = 12;
+        private const float WaterFrameDuration = 0.55f;
+        private const float DecorationChance = 0.11f;
+
         public enum GroundType
         {
             Grass,
-            GrassFlowers,
             Stone,
-            Water
+            Water,
+            Sand
         }
 
         public int Seed { get; private set; } = 271828;
@@ -30,8 +33,10 @@ namespace DoNotOpen.Prototype
         private Material worldMaterial;
         private TopDownPlayer player;
         private Vector2Int currentChunk = new Vector2Int(int.MinValue, int.MinValue);
-
-        private static readonly int[] TileColumns = { 0, 1, 4, 6 };
+        private Sprite[] decorationSprites;
+        private Sprite[] mineralSprites;
+        private bool useSecondWaterFrame;
+        private float nextWaterFrameTime;
 
         public void Initialize(Texture2D worldAtlas, TopDownPlayer controlledPlayer)
         {
@@ -48,12 +53,21 @@ namespace DoNotOpen.Prototype
                 mainTexture = atlas
             };
 
+            decorationSprites = CreateAtlasSprites(1, 0, 7, "Decoration");
+            mineralSprites = CreateAtlasSprites(2, 2, 5, "Mineral");
+            nextWaterFrameTime = Time.time + WaterFrameDuration;
             RefreshChunks(true);
         }
 
         private void Update()
         {
             RefreshChunks(false);
+            if (Time.time >= nextWaterFrameTime)
+            {
+                useSecondWaterFrame = !useSecondWaterFrame;
+                nextWaterFrameTime = Time.time + WaterFrameDuration;
+                RefreshAnimatedTileUvs();
+            }
         }
 
         public Vector2Int WorldToTile(Vector2 position)
@@ -87,18 +101,24 @@ namespace DoNotOpen.Prototype
 
         public GroundType GetGround(int worldX, int worldY)
         {
-            // Keep the initial clearing comfortable and free of blocking water.
+            // 出生点附近保持为草地，方便玩家一开始活动。
             if (Mathf.Abs(worldX) <= 7 && Mathf.Abs(worldY) <= 7)
             {
-                return Hash01(worldX, worldY, Seed + 19) < 0.16f
-                    ? GroundType.GrassFlowers
-                    : GroundType.Grass;
+                return GroundType.Grass;
             }
 
-            float water = FractalNoise(worldX * 0.026f, worldY * 0.026f, Seed + 101);
-            if (water > 0.635f)
+            if (IsWaterNoise(worldX, worldY))
             {
                 return GroundType.Water;
+            }
+
+            // 水边的一圈陆地变成沙地，组成自然的沙滩。
+            if (IsWaterNoise(worldX + 1, worldY) ||
+                IsWaterNoise(worldX - 1, worldY) ||
+                IsWaterNoise(worldX, worldY + 1) ||
+                IsWaterNoise(worldX, worldY - 1))
+            {
+                return GroundType.Sand;
             }
 
             float stone = FractalNoise(worldX * 0.032f, worldY * 0.032f, Seed + 307);
@@ -107,9 +127,7 @@ namespace DoNotOpen.Prototype
                 return GroundType.Stone;
             }
 
-            return Hash01(worldX, worldY, Seed + 919) < 0.18f
-                ? GroundType.GrassFlowers
-                : GroundType.Grass;
+            return GroundType.Grass;
         }
 
         private bool ContainsPosition(Vector2 position)
@@ -181,6 +199,8 @@ namespace DoNotOpen.Prototype
 
             GeneratedWorldChunk chunk = chunkObject.AddComponent<GeneratedWorldChunk>();
             chunk.Mesh = mesh;
+            chunk.Coordinate = coordinate;
+            PopulateDecorations(chunkObject.transform, coordinate);
             return chunk;
         }
 
@@ -201,7 +221,16 @@ namespace DoNotOpen.Prototype
                     GroundType ground = IsInsideWorld(worldX, worldY)
                         ? GetGround(worldX, worldY)
                         : GroundType.Water;
-                    WriteTile(vertices, uv, triangles, tileIndex, localX, localY, TileColumns[(int)ground]);
+                    Vector2Int atlasTile = GetAtlasTile(ground, worldX, worldY);
+                    WriteTile(
+                        vertices,
+                        uv,
+                        triangles,
+                        tileIndex,
+                        localX,
+                        localY,
+                        atlasTile.x,
+                        atlasTile.y);
                     tileIndex++;
                 }
             }
@@ -221,7 +250,8 @@ namespace DoNotOpen.Prototype
             int tileIndex,
             int x,
             int y,
-            int atlasColumn)
+            int atlasColumn,
+            int atlasRow)
         {
             int vertex = tileIndex * 4;
             float left = x - 0.5f;
@@ -233,18 +263,7 @@ namespace DoNotOpen.Prototype
             vertices[vertex + 2] = new Vector3(right, top, 0f);
             vertices[vertex + 3] = new Vector3(right, bottom, 0f);
 
-            // Sample from texel centres so neighbouring atlas cells never bleed
-            // into one another when the camera moves between screen pixels.
-            float insetX = 0.5f / atlas.width;
-            float insetY = 0.5f / atlas.height;
-            float uMin = atlasColumn * AtlasCellSize / (float)atlas.width + insetX;
-            float uMax = (atlasColumn + 1) * AtlasCellSize / (float)atlas.width - insetX;
-            float vMin = (atlas.height - AtlasCellSize) / (float)atlas.height + insetY;
-            float vMax = 1f - insetY;
-            uv[vertex] = new Vector2(uMin, vMin);
-            uv[vertex + 1] = new Vector2(uMin, vMax);
-            uv[vertex + 2] = new Vector2(uMax, vMax);
-            uv[vertex + 3] = new Vector2(uMax, vMin);
+            WriteTileUv(uv, tileIndex, atlasColumn, atlasRow);
 
             int triangle = tileIndex * 6;
             triangles[triangle] = vertex;
@@ -253,6 +272,163 @@ namespace DoNotOpen.Prototype
             triangles[triangle + 3] = vertex;
             triangles[triangle + 4] = vertex + 2;
             triangles[triangle + 5] = vertex + 3;
+        }
+
+        private void WriteTileUv(
+            Vector2[] uv,
+            int tileIndex,
+            int atlasColumn,
+            int atlasRow)
+        {
+            // 从像素中心取样，避免相邻 12×12 方块互相渗色形成接缝。
+            int vertex = tileIndex * 4;
+            float insetX = 0.5f / atlas.width;
+            float insetY = 0.5f / atlas.height;
+            float uMin = atlasColumn * AtlasCellSize / (float)atlas.width + insetX;
+            float uMax = (atlasColumn + 1) * AtlasCellSize / (float)atlas.width - insetX;
+            float vMin =
+                (atlas.height - (atlasRow + 1) * AtlasCellSize) / (float)atlas.height + insetY;
+            float vMax =
+                (atlas.height - atlasRow * AtlasCellSize) / (float)atlas.height - insetY;
+            uv[vertex] = new Vector2(uMin, vMin);
+            uv[vertex + 1] = new Vector2(uMin, vMax);
+            uv[vertex + 2] = new Vector2(uMax, vMax);
+            uv[vertex + 3] = new Vector2(uMax, vMin);
+        }
+
+        private Vector2Int GetAtlasTile(GroundType ground, int worldX, int worldY)
+        {
+            switch (ground)
+            {
+                case GroundType.Stone:
+                    return new Vector2Int(5, 0);
+                case GroundType.Water:
+                    return useSecondWaterFrame
+                        ? new Vector2Int(1, 2)
+                        : new Vector2Int(6, 0);
+                case GroundType.Sand:
+                    return new Vector2Int(0, 2);
+                default:
+                    // 两种草地颜色相同，只用不同斑点位置减少重复感。
+                    return Hash01(worldX, worldY, Seed + 919) < 0.5f
+                        ? new Vector2Int(0, 0)
+                        : new Vector2Int(1, 0);
+            }
+        }
+
+        private Vector2[] BuildChunkUvs(Vector2Int coordinate)
+        {
+            Vector2[] uv = new Vector2[ChunkSize * ChunkSize * 4];
+            int tileIndex = 0;
+            for (int localY = 0; localY < ChunkSize; localY++)
+            {
+                for (int localX = 0; localX < ChunkSize; localX++)
+                {
+                    int worldX = coordinate.x * ChunkSize + localX;
+                    int worldY = coordinate.y * ChunkSize + localY;
+                    GroundType ground = IsInsideWorld(worldX, worldY)
+                        ? GetGround(worldX, worldY)
+                        : GroundType.Water;
+                    Vector2Int atlasTile = GetAtlasTile(ground, worldX, worldY);
+                    WriteTileUv(uv, tileIndex, atlasTile.x, atlasTile.y);
+                    tileIndex++;
+                }
+            }
+
+            return uv;
+        }
+
+        private void RefreshAnimatedTileUvs()
+        {
+            foreach (KeyValuePair<Vector2Int, GeneratedWorldChunk> entry in loadedChunks)
+            {
+                if (entry.Value.Mesh != null)
+                {
+                    entry.Value.Mesh.uv = BuildChunkUvs(entry.Key);
+                }
+            }
+        }
+
+        private void PopulateDecorations(Transform chunk, Vector2Int coordinate)
+        {
+            if (decorationSprites == null || decorationSprites.Length == 0)
+            {
+                return;
+            }
+
+            for (int localY = 0; localY < ChunkSize; localY++)
+            {
+                for (int localX = 0; localX < ChunkSize; localX++)
+                {
+                    int worldX = coordinate.x * ChunkSize + localX;
+                    int worldY = coordinate.y * ChunkSize + localY;
+                    if (!IsInsideWorld(worldX, worldY) ||
+                        GetGround(worldX, worldY) != GroundType.Grass ||
+                        Hash01(worldX, worldY, Seed + 4001) >= DecorationChance)
+                    {
+                        continue;
+                    }
+
+                    int decorationIndex = Mathf.Min(
+                        decorationSprites.Length - 1,
+                        Mathf.FloorToInt(
+                            Hash01(worldX, worldY, Seed + 5101) * decorationSprites.Length));
+                    GameObject decoration = new GameObject(
+                        "Decoration " + worldX + ", " + worldY);
+                    decoration.transform.SetParent(chunk, false);
+                    decoration.transform.localPosition = new Vector3(localX, localY, 0f);
+
+                    SpriteRenderer renderer = decoration.AddComponent<SpriteRenderer>();
+                    renderer.sprite = decorationSprites[decorationIndex];
+                    renderer.sortingOrder = 20;
+                }
+            }
+        }
+
+        private Sprite[] CreateAtlasSprites(
+            int atlasRow,
+            int firstColumn,
+            int count,
+            string spriteName)
+        {
+            Sprite[] sprites = new Sprite[count];
+            float y = atlas.height - (atlasRow + 1) * AtlasCellSize;
+            for (int i = 0; i < count; i++)
+            {
+                int column = firstColumn + i;
+                sprites[i] = Sprite.Create(
+                    atlas,
+                    new Rect(
+                        column * AtlasCellSize,
+                        y,
+                        AtlasCellSize,
+                        AtlasCellSize),
+                    new Vector2(0.5f, 0.5f),
+                    AtlasCellSize);
+                sprites[i].name = spriteName + " " + i;
+            }
+
+            return sprites;
+        }
+
+        public int MineralSpriteCount
+        {
+            get { return mineralSprites == null ? 0 : mineralSprites.Length; }
+        }
+
+        public Sprite GetMineralSprite(int index)
+        {
+            if (mineralSprites == null || mineralSprites.Length == 0)
+            {
+                return null;
+            }
+
+            return mineralSprites[Mathf.Clamp(index, 0, mineralSprites.Length - 1)];
+        }
+
+        private bool IsWaterNoise(int worldX, int worldY)
+        {
+            return FractalNoise(worldX * 0.026f, worldY * 0.026f, Seed + 101) > 0.635f;
         }
 
         private static bool ChunkIntersectsWorld(Vector2Int coordinate)
@@ -319,9 +495,27 @@ namespace DoNotOpen.Prototype
 
         private void OnDestroy()
         {
+            DestroySprites(decorationSprites);
+            DestroySprites(mineralSprites);
             if (worldMaterial != null)
             {
                 Destroy(worldMaterial);
+            }
+        }
+
+        private static void DestroySprites(Sprite[] sprites)
+        {
+            if (sprites == null)
+            {
+                return;
+            }
+
+            foreach (Sprite sprite in sprites)
+            {
+                if (sprite != null)
+                {
+                    Destroy(sprite);
+                }
             }
         }
     }
@@ -329,6 +523,7 @@ namespace DoNotOpen.Prototype
     public sealed class GeneratedWorldChunk : MonoBehaviour
     {
         public Mesh Mesh { get; set; }
+        public Vector2Int Coordinate { get; set; }
 
         private void OnDestroy()
         {
