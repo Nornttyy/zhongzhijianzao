@@ -17,6 +17,7 @@ namespace DoNotOpen.Prototype
         public bool IsSwimming { get; private set; }
 
         private Rigidbody2D body;
+        private CircleCollider2D collisionShape;
         private Vector2 movement;
         private Vector2 spawnPosition;
         private Vector3 visualOrigin;
@@ -44,6 +45,7 @@ namespace DoNotOpen.Prototype
         private void Awake()
         {
             body = GetComponent<Rigidbody2D>();
+            collisionShape = GetComponent<CircleCollider2D>();
             spawnPosition = transform.position;
         }
 
@@ -270,14 +272,20 @@ namespace DoNotOpen.Prototype
             Vector2 next = body.position + movement * (movementSpeed * Time.fixedDeltaTime);
             if (World != null)
             {
+                float collisionRadius = collisionShape == null
+                    ? MovementRadius
+                    : collisionShape.radius;
+                Vector2 collisionOffset = collisionShape == null
+                    ? Vector2.zero
+                    : collisionShape.offset;
                 Vector2 horizontal = new Vector2(next.x, body.position.y);
-                if (World.CanStandAt(horizontal, MovementRadius))
+                if (World.CanStandAt(horizontal + collisionOffset, collisionRadius))
                 {
                     body.position = horizontal;
                 }
 
                 Vector2 vertical = new Vector2(body.position.x, next.y);
-                if (World.CanStandAt(vertical, MovementRadius))
+                if (World.CanStandAt(vertical + collisionOffset, collisionRadius))
                 {
                     body.position = vertical;
                 }
