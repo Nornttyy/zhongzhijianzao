@@ -4,7 +4,7 @@ namespace DoNotOpen.Prototype
 {
     public sealed class PrototypeBootstrap : MonoBehaviour
     {
-        private const float PlayerPixelsPerUnit = 32f;
+        private const float PlayerPixelsPerUnit = 12f;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void EnsurePrototypeExists()
