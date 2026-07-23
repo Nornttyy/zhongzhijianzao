@@ -25,6 +25,8 @@ namespace DoNotOpen.Prototype
         private const float CaveHintDistance = 3.6f;
         private const int SurfaceSortingBase = 20000;
         private const float SurfaceSortingScale = 0.1f;
+        private const float CaveFloorBrightness = 0.92f;
+        private const float CaveWallBrightness = 0.42f;
         private const int CaveFloorWidth = 49;
         private const int CaveFloorHeight = 37;
 
@@ -56,6 +58,7 @@ namespace DoNotOpen.Prototype
         private Texture2D atlas;
         private Material worldMaterial;
         private Material caveMaterial;
+        private Material caveWallMaterial;
         private TopDownPlayer player;
         private Vector2Int currentChunk = new Vector2Int(int.MinValue, int.MinValue);
         private Sprite[] decorationSprites;
@@ -65,6 +68,10 @@ namespace DoNotOpen.Prototype
         private SpriteRenderer caveExitRenderer;
         private Vector2 surfaceReturnPosition;
         private Color surfaceCameraColor;
+        private bool[] caveWalkable;
+        private int[] caveDepth;
+        private int caveMaxDepth;
+        private int caveSeed;
         private bool useSecondWaterFrame;
         private float nextWaterFrameTime;
 
@@ -91,7 +98,21 @@ namespace DoNotOpen.Prototype
             caveMaterial = new Material(worldMaterial)
             {
                 name = "Cave Pixel Material",
-                color = new Color(0.68f, 0.72f, 0.68f, 1f)
+                color = new Color(
+                    CaveFloorBrightness,
+                    CaveFloorBrightness,
+                    CaveFloorBrightness * 0.96f,
+                    1f)
+            };
+
+            caveWallMaterial = new Material(worldMaterial)
+            {
+                name = "Cave Blocking Rock Material",
+                color = new Color(
+                    CaveWallBrightness,
+                    CaveWallBrightness,
+                    CaveWallBrightness * 0.96f,
+                    1f)
             };
 
             decorationSprites = CreateAtlasSprites(1, 0, 7, "Decoration");
@@ -608,12 +629,29 @@ namespace DoNotOpen.Prototype
             return false;
         }
 
-        private static bool ContainsCavePosition(Vector2 position, float radius)
+        private bool ContainsCavePosition(Vector2 position, float radius)
         {
-            return position.x - radius >= CaveWalkBounds.min.x &&
-                   position.x + radius <= CaveWalkBounds.max.x &&
-                   position.y - radius >= CaveWalkBounds.min.y &&
-                   position.y + radius <= CaveWalkBounds.max.y;
+            if (position.x - radius < CaveWalkBounds.min.x ||
+                position.x + radius > CaveWalkBounds.max.x ||
+                position.y - radius < CaveWalkBounds.min.y ||
+                position.y + radius > CaveWalkBounds.max.y)
+            {
+                return false;
+            }
+
+            for (int y = -1; y <= 1; y++)
+            {
+                for (int x = -1; x <= 1; x++)
+                {
+                    Vector2 sample = position + new Vector2(x * radius, y * radius);
+                    if (!IsCaveWalkable(sample))
+                    {
+                        return false;
+                    }
+                }
+            }
+
+            return true;
         }
 
         private void HandleCaveInteraction()
@@ -687,6 +725,7 @@ namespace DoNotOpen.Prototype
             }
 
             IsInCave = true;
+            caveSeed = GetCaveSeed(entrance.transform.position);
             SetSurfaceChunksActive(false);
             CreateCaveInterior();
             player.Teleport(CaveSpawnPosition);
@@ -779,6 +818,8 @@ namespace DoNotOpen.Prototype
             caveRoot = new GameObject("Cave Interior");
             caveRoot.transform.SetParent(transform, false);
 
+            BuildCaveMaze();
+
             GameObject floorObject = new GameObject("Cave Floor");
             floorObject.transform.SetParent(caveRoot.transform, false);
             Mesh caveFloorMesh = BuildCaveFloorMesh();
@@ -790,6 +831,17 @@ namespace DoNotOpen.Prototype
             GeneratedWorldChunk cleanup = floorObject.AddComponent<GeneratedWorldChunk>();
             cleanup.Mesh = caveFloorMesh;
 
+            GameObject wallObject = new GameObject("Cave Blocking Rocks");
+            wallObject.transform.SetParent(caveRoot.transform, false);
+            Mesh caveWallMesh = BuildCaveWallMesh();
+            MeshFilter wallFilter = wallObject.AddComponent<MeshFilter>();
+            wallFilter.sharedMesh = caveWallMesh;
+            MeshRenderer wallRenderer = wallObject.AddComponent<MeshRenderer>();
+            wallRenderer.sharedMaterial = caveWallMaterial;
+            wallRenderer.sortingOrder = 0;
+            GeneratedWorldChunk wallCleanup = wallObject.AddComponent<GeneratedWorldChunk>();
+            wallCleanup.Mesh = caveWallMesh;
+
             GameObject exitObject = new GameObject("Cave Exit");
             exitObject.transform.SetParent(caveRoot.transform, false);
             exitObject.transform.localPosition = CaveExitBottom;
@@ -800,7 +852,172 @@ namespace DoNotOpen.Prototype
             PopulateCaveMinerals(caveRoot.transform);
         }
 
+        private void BuildCaveMaze()
+        {
+            caveWalkable = new bool[CaveFloorWidth * CaveFloorHeight];
+            caveDepth = new int[caveWalkable.Length];
+            for (int i = 0; i < caveDepth.Length; i++)
+            {
+                caveDepth[i] = -1;
+            }
+
+            // 深度优先回溯生成一条连通的迷宫，所有未挖开的格子都是阻挡石。
+            Vector2Int start = new Vector2Int(-1, -15);
+            List<Vector2Int> stack = new List<Vector2Int>();
+            SetCaveWalkable(start);
+            stack.Add(start);
+
+            Vector2Int[] directions =
+            {
+                Vector2Int.up,
+                Vector2Int.right,
+                Vector2Int.down,
+                Vector2Int.left
+            };
+            while (stack.Count > 0)
+            {
+                Vector2Int current = stack[stack.Count - 1];
+                int directionOffset = Mathf.FloorToInt(
+                    Hash01(current.x, current.y, caveSeed + 15101) * directions.Length);
+                bool carved = false;
+
+                for (int i = 0; i < directions.Length; i++)
+                {
+                    Vector2Int direction = directions[(directionOffset + i) % directions.Length];
+                    Vector2Int next = current + direction * 2;
+                    if (!IsCaveMazeRoom(next) || IsCaveWalkableTile(next.x, next.y))
+                    {
+                        continue;
+                    }
+
+                    SetCaveWalkable(current + direction);
+                    SetCaveWalkable(next);
+                    stack.Add(next);
+                    carved = true;
+                    break;
+                }
+
+                if (!carved)
+                {
+                    stack.RemoveAt(stack.Count - 1);
+                }
+            }
+
+            // 入口、出生点和第一段走廊固定打通，确保每个迷宫都能正常进入。
+            SetCaveWalkable(0, -18);
+            SetCaveWalkable(0, -17);
+            SetCaveWalkable(0, -16);
+            SetCaveWalkable(0, -15);
+            SetCaveWalkable(-1, -15);
+            BuildCaveDepths(new Vector2Int(0, -17));
+        }
+
+        private void BuildCaveDepths(Vector2Int source)
+        {
+            Queue<Vector2Int> queue = new Queue<Vector2Int>();
+            int sourceIndex = GetCaveTileIndex(source.x, source.y);
+            caveDepth[sourceIndex] = 0;
+            queue.Enqueue(source);
+            caveMaxDepth = 0;
+
+            Vector2Int[] directions =
+            {
+                Vector2Int.up,
+                Vector2Int.right,
+                Vector2Int.down,
+                Vector2Int.left
+            };
+            while (queue.Count > 0)
+            {
+                Vector2Int current = queue.Dequeue();
+                int currentDepth = caveDepth[GetCaveTileIndex(current.x, current.y)];
+                for (int i = 0; i < directions.Length; i++)
+                {
+                    Vector2Int next = current + directions[i];
+                    if (!IsCaveWalkableTile(next.x, next.y))
+                    {
+                        continue;
+                    }
+
+                    int nextIndex = GetCaveTileIndex(next.x, next.y);
+                    if (caveDepth[nextIndex] >= 0)
+                    {
+                        continue;
+                    }
+
+                    caveDepth[nextIndex] = currentDepth + 1;
+                    caveMaxDepth = Mathf.Max(caveMaxDepth, caveDepth[nextIndex]);
+                    queue.Enqueue(next);
+                }
+            }
+        }
+
+        private bool IsCaveWalkable(Vector2 position)
+        {
+            return IsCaveWalkableTile(
+                Mathf.FloorToInt(position.x + 0.5f),
+                Mathf.FloorToInt(position.y + 0.5f));
+        }
+
+        private bool IsCaveWalkableTile(int x, int y)
+        {
+            if (caveWalkable == null ||
+                x < -CaveFloorWidth / 2 ||
+                x > CaveFloorWidth / 2 ||
+                y < -CaveFloorHeight / 2 ||
+                y > CaveFloorHeight / 2)
+            {
+                return false;
+            }
+
+            return caveWalkable[GetCaveTileIndex(x, y)];
+        }
+
+        private void SetCaveWalkable(Vector2Int tile)
+        {
+            SetCaveWalkable(tile.x, tile.y);
+        }
+
+        private void SetCaveWalkable(int x, int y)
+        {
+            if (x >= -CaveFloorWidth / 2 &&
+                x <= CaveFloorWidth / 2 &&
+                y >= -CaveFloorHeight / 2 &&
+                y <= CaveFloorHeight / 2)
+            {
+                caveWalkable[GetCaveTileIndex(x, y)] = true;
+            }
+        }
+
+        private static bool IsCaveMazeRoom(Vector2Int tile)
+        {
+            int halfWidth = CaveFloorWidth / 2;
+            int halfHeight = CaveFloorHeight / 2;
+            return tile.x > -halfWidth &&
+                   tile.x < halfWidth &&
+                   tile.y > -halfHeight &&
+                   tile.y < halfHeight &&
+                   ((tile.x + halfWidth) & 1) == 1 &&
+                   ((tile.y + halfHeight) & 1) == 1;
+        }
+
+        private static int GetCaveTileIndex(int x, int y)
+        {
+            return (y + CaveFloorHeight / 2) * CaveFloorWidth +
+                   (x + CaveFloorWidth / 2);
+        }
+
         private Mesh BuildCaveFloorMesh()
+        {
+            return BuildCaveTileMesh(true, "Generated Cave Floor Mesh");
+        }
+
+        private Mesh BuildCaveWallMesh()
+        {
+            return BuildCaveTileMesh(false, "Generated Cave Blocking Rock Mesh");
+        }
+
+        private Mesh BuildCaveTileMesh(bool walkable, string meshName)
         {
             int tileCount = CaveFloorWidth * CaveFloorHeight;
             Vector3[] vertices = new Vector3[tileCount * 4];
@@ -814,6 +1031,11 @@ namespace DoNotOpen.Prototype
             {
                 for (int x = 0; x < CaveFloorWidth; x++)
                 {
+                    if (IsCaveWalkableTile(x - halfWidth, y - halfHeight) != walkable)
+                    {
+                        continue;
+                    }
+
                     WriteTile(
                         vertices,
                         uv,
@@ -827,7 +1049,10 @@ namespace DoNotOpen.Prototype
                 }
             }
 
-            Mesh mesh = new Mesh { name = "Generated Cave Floor Mesh" };
+            System.Array.Resize(ref vertices, tileIndex * 4);
+            System.Array.Resize(ref uv, tileIndex * 4);
+            System.Array.Resize(ref triangles, tileIndex * 6);
+            Mesh mesh = new Mesh { name = meshName };
             mesh.vertices = vertices;
             mesh.uv = uv;
             mesh.triangles = triangles;
@@ -848,16 +1073,36 @@ namespace DoNotOpen.Prototype
             {
                 for (int x = -halfWidth + 2; x <= halfWidth - 2; x++)
                 {
-                    if ((Mathf.Abs(x) <= 2 && y <= -11) ||
-                        Hash01(x, y, Seed + 12101) >= 0.045f)
+                    if (!IsCaveWalkableTile(x, y))
                     {
                         continue;
                     }
 
+                    int depth = caveDepth[GetCaveTileIndex(x, y)];
+                    if (depth < 3 || (Mathf.Abs(x) <= 2 && y <= -11))
+                    {
+                        continue;
+                    }
+
+                    float depthRatio = caveMaxDepth <= 0
+                        ? 0f
+                        : depth / (float)caveMaxDepth;
+                    float depositChance = Mathf.Lerp(0.085f, 0.038f, depthRatio);
+                    if (Hash01(x, y, caveSeed + 12101) >= depositChance)
+                    {
+                        continue;
+                    }
+
+                    int maxTier = Mathf.Clamp(
+                        Mathf.FloorToInt(depthRatio * mineralSprites.Length * 1.15f),
+                        0,
+                        mineralSprites.Length - 1);
+                    float tierRoll = Mathf.Pow(
+                        Hash01(x, y, caveSeed + 12102),
+                        Mathf.Lerp(2.1f, 0.7f, depthRatio));
                     int mineralIndex = Mathf.Min(
-                        mineralSprites.Length - 1,
-                        Mathf.FloorToInt(
-                            Hash01(x, y, Seed + 12102) * mineralSprites.Length));
+                        maxTier,
+                        Mathf.FloorToInt(tierRoll * (maxTier + 1)));
                     GameObject mineral = new GameObject("Cave Mineral " + x + ", " + y);
                     mineral.transform.SetParent(cave, false);
                     mineral.transform.localPosition = new Vector3(x, y, 0f);
@@ -930,6 +1175,15 @@ namespace DoNotOpen.Prototype
                    y >= -WorldHeight / 2 && y < WorldHeight / 2;
         }
 
+        private int GetCaveSeed(Vector2 worldPosition)
+        {
+            Vector2Int tile = WorldToTile(worldPosition);
+            unchecked
+            {
+                return Seed ^ (tile.x * 92837111) ^ (tile.y * 689287499);
+            }
+        }
+
         private static float FractalNoise(float x, float y, int seed)
         {
             float sum = 0f;
@@ -987,6 +1241,10 @@ namespace DoNotOpen.Prototype
             if (caveMaterial != null)
             {
                 Destroy(caveMaterial);
+            }
+            if (caveWallMaterial != null)
+            {
+                Destroy(caveWallMaterial);
             }
             if (worldMaterial != null)
             {
