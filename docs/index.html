@@ -233,11 +233,13 @@
     }
 
     @keyframes title-drop {
-      0% { opacity: 0; transform: translateY(-70vh) rotate(-8deg) scale(0.78); }
-      48% { opacity: 1; transform: translateY(30px) rotate(4deg) scale(1.08); }
-      64% { transform: translateY(-15px) rotate(-2deg) scale(0.96); }
-      78% { transform: translateY(8px) rotate(1deg) scale(1.04); }
-      90% { transform: translateY(-4px) rotate(0deg) scale(0.99); }
+      /* Keep the title upright and still while it falls; only the vertical
+         landing bounce moves it.  The gentle sway starts after this animation. */
+      0% { opacity: 0; transform: translateY(-70vh) rotate(0deg) scale(1); }
+      48% { opacity: 1; transform: translateY(30px) rotate(0deg) scale(1); }
+      64% { transform: translateY(-15px) rotate(0deg) scale(1); }
+      78% { transform: translateY(8px) rotate(0deg) scale(1); }
+      90% { transform: translateY(-4px) rotate(0deg) scale(1); }
       100% { opacity: 1; transform: translateY(0) rotate(0deg) scale(1); }
     }
 
