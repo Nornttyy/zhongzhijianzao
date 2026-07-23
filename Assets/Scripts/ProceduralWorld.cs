@@ -22,6 +22,7 @@ namespace DoNotOpen.Prototype
         private const float CavePixelsPerUnit = 12f;
         private const float CaveChunkChance = 0.45f;
         private const float CaveInteractionDistance = 2.35f;
+        private const float CaveHintDistance = 3.6f;
         private const int CaveFloorWidth = 49;
         private const int CaveFloorHeight = 37;
 
@@ -738,7 +739,7 @@ namespace DoNotOpen.Prototype
 
                 if (entrance.gameObject.activeInHierarchy &&
                     Vector2.Distance(playerPosition, entrance.InteractionPoint) <=
-                    CaveInteractionDistance + 0.35f)
+                    CaveHintDistance)
                 {
                     return "右键点击矿洞进入";
                 }
