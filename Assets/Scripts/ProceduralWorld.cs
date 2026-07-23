@@ -13,6 +13,7 @@ namespace DoNotOpen.Prototype
         private const int AtlasCellSize = 12;
         private const float WaterFrameDuration = 0.55f;
         private const float DecorationChance = 0.11f;
+        private const float SwimBodyProbeHeight = 0.42f;
         private const int SwimEntryWaterSamples = 7;
         private const int SwimStayWaterSamples = 3;
 
@@ -109,6 +110,13 @@ namespace DoNotOpen.Prototype
 
         public bool ShouldSwimAt(Vector2 position, bool currentlySwimming)
         {
+            // 角色的脚在图片底部；向上离开水面时，还要检查身体中间是否仍在水上。
+            if (!IsWaterAt(position) ||
+                !IsWaterAt(position + Vector2.up * SwimBodyProbeHeight))
+            {
+                return false;
+            }
+
             int waterSamples = 0;
             for (int i = 0; i < SwimSampleOffsets.Length; i++)
             {
