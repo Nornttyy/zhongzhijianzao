@@ -8,8 +8,16 @@
   <title>Zhong Zhi Jian Zao · 种植建造</title>
   <style>
     @font-face {
-      font-family: "Ark Pixel";
-      src: url("Fonts/ark-pixel-12px.ttf") format("truetype");
+      font-family: "Ark Pixel Web";
+      src: url("Fonts/ark-pixel-12px-latin.woff2") format("woff2");
+      unicode-range: U+0000-00FF, U+2000-206F, U+20AC, U+2122, U+2190-21FF;
+      font-display: swap;
+    }
+
+    @font-face {
+      font-family: "Ark Pixel Web";
+      src: url("Fonts/ark-pixel-12px-zh_cn.woff2") format("woff2");
+      unicode-range: U+2E80-9FFF, U+3000-303F, U+FF00-FFEF;
       font-display: swap;
     }
 
@@ -35,7 +43,7 @@
       overflow: hidden;
       background: #172219;
       color: var(--ink);
-      font-family: "Ark Pixel", "PingFang SC", "Microsoft YaHei", sans-serif;
+      font-family: "Ark Pixel Web", "PingFang SC", "Microsoft YaHei", sans-serif;
       font-synthesis: none;
       -webkit-font-smoothing: none;
       -moz-osx-font-smoothing: grayscale;
