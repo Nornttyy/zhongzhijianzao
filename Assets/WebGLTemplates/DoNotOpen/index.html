@@ -229,7 +229,7 @@
 
     .title-motion h1 {
       transform-origin: center bottom;
-      animation: title-sway 3.8s ease-in-out 2.95s infinite;
+      animation: title-sway 3.8s ease-in-out 2.75s infinite;
     }
 
     @keyframes title-drop {
@@ -244,8 +244,9 @@
     }
 
     @keyframes title-sway {
-      0%, 100% { transform: rotate(-2.5deg) scale(0.98); }
+      0% { transform: rotate(0deg) scale(1); }
       50% { transform: rotate(2.5deg) scale(1.05); }
+      100% { transform: rotate(0deg) scale(1); }
     }
 
     .menu-subtitle {
