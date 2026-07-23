@@ -23,6 +23,8 @@ namespace DoNotOpen.Prototype
         private const float CaveChunkChance = 0.45f;
         private const float CaveInteractionDistance = 2.35f;
         private const float CaveHintDistance = 3.6f;
+        private const int SurfaceSortingBase = 20000;
+        private const float SurfaceSortingScale = 0.1f;
         private const int CaveFloorWidth = 49;
         private const int CaveFloorHeight = 37;
 
@@ -518,8 +520,7 @@ namespace DoNotOpen.Prototype
 
             SpriteRenderer renderer = entranceObject.AddComponent<SpriteRenderer>();
             renderer.sprite = caveEntranceSprite;
-            renderer.sortingOrder =
-                310 - Mathf.RoundToInt(entranceObject.transform.position.y * 10f);
+            renderer.sortingOrder = GetSurfaceSortingOrder(entranceObject.transform.position.y);
 
             CaveEntranceMarker marker = entranceObject.AddComponent<CaveEntranceMarker>();
             marker.EntranceRenderer = renderer;
@@ -753,6 +754,15 @@ namespace DoNotOpen.Prototype
             get { return CaveExitBottom + Vector2.up * 0.65f; }
         }
 
+        public static int GetSurfaceSortingOrder(float worldY)
+        {
+            // 排序值始终保持在地面之上，同时落在游泳遮罩可用的 short 范围内。
+            return Mathf.Clamp(
+                SurfaceSortingBase - Mathf.RoundToInt(worldY * SurfaceSortingScale),
+                100,
+                short.MaxValue - 1);
+        }
+
         private void SetSurfaceChunksActive(bool active)
         {
             foreach (GeneratedWorldChunk chunk in loadedChunks.Values)
@@ -785,8 +795,7 @@ namespace DoNotOpen.Prototype
             exitObject.transform.localPosition = CaveExitBottom;
             caveExitRenderer = exitObject.AddComponent<SpriteRenderer>();
             caveExitRenderer.sprite = caveEntranceSprite;
-            caveExitRenderer.sortingOrder =
-                310 - Mathf.RoundToInt(CaveExitBottom.y * 10f);
+            caveExitRenderer.sortingOrder = GetSurfaceSortingOrder(CaveExitBottom.y);
 
             PopulateCaveMinerals(caveRoot.transform);
         }
