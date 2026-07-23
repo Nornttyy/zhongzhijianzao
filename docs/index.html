@@ -76,8 +76,8 @@
     #loading {
       position: absolute;
       inset: 0;
-      display: grid;
-      place-items: center;
+      display: flex;
+      justify-content: center;
       padding: 24px;
     }
 
@@ -85,13 +85,10 @@
       z-index: 6;
       background:
         linear-gradient(rgba(18, 38, 23, 0.18), rgba(18, 38, 23, 0.68)),
-        repeating-linear-gradient(
-          0deg,
-          #4bcf42 0,
-          #4bcf42 12px,
-          #47c83f 12px,
-          #47c83f 24px
-        );
+        linear-gradient(to bottom, #8fd8d2 0%, #c0e9ad 54%, #68c45b 54%, #57b94d 100%);
+      align-items: flex-start;
+      padding-top: clamp(20px, 5vh, 58px);
+      padding-bottom: 34vh;
       transition: opacity 180ms steps(3, end);
     }
 
@@ -128,18 +125,89 @@
       right: 0;
       bottom: 0;
       left: 0;
-      height: 22%;
+      z-index: 0;
+      height: 38%;
       content: "";
       background:
         repeating-linear-gradient(
           90deg,
-          rgba(151, 243, 225, 0.18) 0,
-          rgba(151, 243, 225, 0.18) 18px,
-          transparent 18px,
-          transparent 34px
+          rgba(38, 143, 56, 0.14) 0,
+          rgba(38, 143, 56, 0.14) 6px,
+          transparent 6px,
+          transparent 18px
         ),
-        #65dfce;
-      box-shadow: inset 0 6px 0 rgba(27, 122, 111, 0.2);
+        repeating-linear-gradient(
+          0deg,
+          #55b84d 0,
+          #55b84d 12px,
+          #61c554 12px,
+          #61c554 24px
+        );
+      box-shadow: inset 0 6px 0 rgba(31, 120, 49, 0.32);
+    }
+
+    .menu-scene {
+      position: absolute;
+      right: 0;
+      bottom: 0;
+      left: 0;
+      z-index: 1;
+      height: 38%;
+      overflow: hidden;
+      pointer-events: none;
+    }
+
+    .menu-tuft {
+      position: absolute;
+      bottom: 17%;
+      width: 6px;
+      height: 18px;
+      background: #3c9f3d;
+      box-shadow: 6px 6px 0 #3c9f3d;
+      opacity: 0.85;
+      transform: skewX(-12deg);
+    }
+
+    .menu-tuft.one { left: 12%; }
+    .menu-tuft.two { left: 27%; bottom: 28%; transform: scale(0.75) skewX(-12deg); }
+    .menu-tuft.three { right: 24%; bottom: 24%; transform: scale(0.9) skewX(-12deg); }
+    .menu-tuft.four { right: 10%; }
+
+    .menu-character {
+      position: absolute;
+      bottom: 14%;
+      left: 50%;
+      width: 48px;
+      height: 62px;
+      image-rendering: pixelated;
+      animation: menu-walk 5.6s steps(12, end) infinite;
+    }
+
+    .menu-player-shadow {
+      position: absolute;
+      bottom: 0;
+      left: 3px;
+      width: 42px;
+      height: 8px;
+      background: rgba(34, 101, 40, 0.36);
+      border-radius: 50%;
+    }
+
+    .menu-player {
+      position: absolute;
+      bottom: 7px;
+      left: 0;
+      width: 48px;
+      height: 48px;
+      background: url("player-preview.png") center / 48px 48px no-repeat;
+      image-rendering: pixelated;
+    }
+
+    @keyframes menu-walk {
+      0%, 100% { transform: translateX(-50%) translateY(0); }
+      25% { transform: translateX(calc(-50% - 84px)) translateY(-3px); }
+      50% { transform: translateX(calc(-50% + 84px)) translateY(0) scaleX(-1); }
+      75% { transform: translateX(calc(-50% - 84px)) translateY(-3px) scaleX(-1); }
     }
 
     #menu.hidden {
@@ -150,7 +218,7 @@
 
     .menu-card {
       position: relative;
-      z-index: 1;
+      z-index: 2;
       width: min(500px, 90vw);
       border: 4px solid #203c25;
       padding: 34px 34px 30px;
@@ -351,6 +419,16 @@
     <canvas id="unity-canvas" tabindex="-1"></canvas>
 
     <section id="menu" aria-label="主界面">
+      <div class="menu-scene" aria-hidden="true">
+        <i class="menu-tuft one"></i>
+        <i class="menu-tuft two"></i>
+        <i class="menu-tuft three"></i>
+        <i class="menu-tuft four"></i>
+        <div class="menu-character">
+          <div class="menu-player-shadow"></div>
+          <div class="menu-player"></div>
+        </div>
+      </div>
       <div class="menu-card">
         <div class="menu-kicker">12×12 PIXEL WORLD</div>
         <h1>种植建造</h1>
@@ -390,7 +468,7 @@
 
     // 每次发布都更换版本号，避免 UnityCache/浏览器继续使用旧的同名构建文件。
     const buildUrl = "Build";
-    const buildVersion = "20260723-mainmenu1";
+    const buildVersion = "20260723-mainmenu2";
     const assetUrl = file => buildUrl + "/" + file + "?v=" + buildVersion;
     const loaderUrl = assetUrl("docs.loader.js");
     const config = {
