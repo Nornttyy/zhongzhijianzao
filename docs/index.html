@@ -158,18 +158,9 @@
       width: 48px;
       height: 62px;
       image-rendering: pixelated;
+      transform-origin: center bottom;
       transform: translateX(-50%);
-      animation: menu-bob 900ms ease-in-out infinite alternate;
-    }
-
-    .menu-player-shadow {
-      position: absolute;
-      bottom: 0;
-      left: 3px;
-      width: 42px;
-      height: 8px;
-      background: rgba(34, 101, 40, 0.36);
-      border-radius: 50%;
+      animation: menu-player-motion 420ms ease-in-out infinite;
     }
 
     .menu-player {
@@ -182,9 +173,12 @@
       image-rendering: pixelated;
     }
 
-    @keyframes menu-bob {
-      from { transform: translateX(-50%) translateY(0); }
-      to { transform: translateX(-50%) translateY(-6px); }
+    @keyframes menu-player-motion {
+      0% { transform: translateX(-50%) translateY(0) rotate(0deg); }
+      25% { transform: translateX(-50%) translateY(-3px) rotate(3deg); }
+      50% { transform: translateX(-50%) translateY(-6px) rotate(0deg); }
+      75% { transform: translateX(-50%) translateY(-3px) rotate(-3deg); }
+      100% { transform: translateX(-50%) translateY(0) rotate(0deg); }
     }
 
     #menu.hidden {
@@ -490,7 +484,6 @@
       <div class="menu-cloud cloud-two" aria-hidden="true"></div>
       <div class="menu-scene" aria-hidden="true">
         <div class="menu-character">
-          <div class="menu-player-shadow"></div>
           <div class="menu-player"></div>
         </div>
       </div>
@@ -523,7 +516,7 @@
 
     // 每次发布都更换版本号，避免 UnityCache/浏览器继续使用旧的同名构建文件。
     const buildUrl = "Build";
-    const buildVersion = "20260723-playertilt1";
+    const buildVersion = "20260723-menuplayer1";
     const assetUrl = file => buildUrl + "/" + file + "?v=" + buildVersion;
     const loaderUrl = assetUrl("docs.loader.js");
     const config = {
