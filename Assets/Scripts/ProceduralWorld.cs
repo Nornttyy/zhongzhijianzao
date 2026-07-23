@@ -723,7 +723,7 @@ namespace DoNotOpen.Prototype
             {
                 return Vector2.Distance(playerPosition, CaveExitInteractionPoint) <=
                        CaveInteractionDistance + 0.35f
-                    ? "RIGHT-CLICK THE ENTRANCE TO LEAVE"
+                    ? "右键点击洞口离开"
                     : string.Empty;
             }
 
@@ -740,7 +740,7 @@ namespace DoNotOpen.Prototype
                     Vector2.Distance(playerPosition, entrance.InteractionPoint) <=
                     CaveInteractionDistance + 0.35f)
                 {
-                    return "RIGHT-CLICK THE CAVE TO ENTER";
+                    return "右键点击矿洞进入";
                 }
             }
 
