@@ -84,7 +84,7 @@
     #menu {
       z-index: 6;
       background:
-        linear-gradient(rgba(18, 38, 23, 0.26), rgba(18, 38, 23, 0.72)),
+        linear-gradient(rgba(18, 38, 23, 0.18), rgba(18, 38, 23, 0.68)),
         repeating-linear-gradient(
           0deg,
           #4bcf42 0,
@@ -93,6 +93,34 @@
           #47c83f 24px
         );
       transition: opacity 180ms steps(3, end);
+    }
+
+    #menu::before {
+      position: absolute;
+      top: 8%;
+      left: 10%;
+      width: 84px;
+      height: 84px;
+      content: "";
+      background: #f6d86f;
+      box-shadow:
+        12px 0 0 #f6d86f,
+        24px 0 0 #f6d86f,
+        0 12px 0 #f6d86f,
+        12px 12px 0 #f6d86f,
+        24px 12px 0 #f6d86f,
+        12px 24px 0 #f6d86f,
+        24px 24px 0 #f6d86f,
+        36px 24px 0 #f6d86f,
+        48px 24px 0 #f6d86f,
+        24px 36px 0 #f6d86f,
+        36px 36px 0 #f6d86f,
+        48px 36px 0 #f6d86f,
+        36px 48px 0 #f6d86f,
+        48px 48px 0 #f6d86f;
+      opacity: 0.8;
+      transform: scale(0.5);
+      transform-origin: top left;
     }
 
     #menu::after {
@@ -123,14 +151,22 @@
     .menu-card {
       position: relative;
       z-index: 1;
-      width: min(440px, 88vw);
+      width: min(500px, 90vw);
       border: 4px solid #203c25;
-      padding: 42px 30px 32px;
+      padding: 34px 34px 30px;
       background: var(--panel);
       box-shadow:
         0 8px 0 rgba(15, 31, 19, 0.8),
-        inset 0 0 0 3px rgba(169, 216, 110, 0.18);
+        inset 0 0 0 3px rgba(169, 216, 110, 0.18),
+        inset 0 10px 0 rgba(255, 243, 191, 0.04);
       text-align: center;
+    }
+
+    .menu-kicker {
+      margin-bottom: 14px;
+      color: var(--accent);
+      font-size: 12px;
+      letter-spacing: 0.18em;
     }
 
     .menu-card h1 {
@@ -144,19 +180,34 @@
     }
 
     .menu-subtitle {
-      margin: 16px 0 30px;
+      margin: 12px 0 18px;
       color: var(--muted);
       font-size: 18px;
       letter-spacing: 0.26em;
     }
 
     .menu-description {
-      max-width: 330px;
-      margin: -12px auto 28px;
+      max-width: 360px;
+      margin: 0 auto 22px;
       color: var(--muted);
-      font-size: 14px;
-      line-height: 1.8;
+      font-size: 15px;
+      line-height: 1.7;
       letter-spacing: 0.04em;
+    }
+
+    .menu-tags {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      margin: 0 auto 24px;
+    }
+
+    .menu-tag {
+      border: 2px solid rgba(169, 216, 110, 0.48);
+      padding: 6px 10px 4px;
+      color: #e3efbd;
+      background: rgba(62, 107, 57, 0.55);
+      font-size: 12px;
     }
 
     .pixel-button {
@@ -187,10 +238,17 @@
     }
 
     .controls {
-      margin-top: 26px;
+      margin-top: 22px;
       color: #d7e8c2;
       font-size: 13px;
       line-height: 1.8;
+    }
+
+    .menu-tip {
+      margin-top: 12px;
+      color: #9fbd8c;
+      font-size: 11px;
+      letter-spacing: 0.08em;
     }
 
     #loading {
@@ -294,11 +352,18 @@
 
     <section id="menu" aria-label="主界面">
       <div class="menu-card">
+        <div class="menu-kicker">12×12 PIXEL WORLD</div>
         <h1>种植建造</h1>
         <div class="menu-subtitle">像素世界</div>
-        <p class="menu-description">一片由你的像素素材生成的大世界。<br>先四处走走，寻找湖泊、石地与花草。</p>
+        <p class="menu-description">种下第一颗种子，<br>把一片土地变成你的家。</p>
+        <div class="menu-tags" aria-label="游戏特色">
+          <span class="menu-tag">种植</span>
+          <span class="menu-tag">建造</span>
+          <span class="menu-tag">探索</span>
+        </div>
         <button id="start-game" class="pixel-button" type="button">开始游戏</button>
-        <div class="controls">方向键 / WASD 移动　·　右键 互动　·　R 返回</div>
+        <div class="controls">方向键 / WASD 移动　·　R 返回</div>
+        <div class="menu-tip">一个由像素素材组成的小世界</div>
       </div>
     </section>
 
@@ -325,7 +390,7 @@
 
     // 每次发布都更换版本号，避免 UnityCache/浏览器继续使用旧的同名构建文件。
     const buildUrl = "Build";
-    const buildVersion = "20260723-colorfix2";
+    const buildVersion = "20260723-mainmenu1";
     const assetUrl = file => buildUrl + "/" + file + "?v=" + buildVersion;
     const loaderUrl = assetUrl("docs.loader.js");
     const config = {
@@ -336,7 +401,7 @@
       streamingAssetsUrl: "StreamingAssets",
       companyName: "Nornttyy",
       productName: "Zhong Zhi Jian Zao",
-      productVersion: "0.1.0-colorfix2",
+      productVersion: "0.1.0",
       devicePixelRatio: Math.min(window.devicePixelRatio || 1, 2),
       showBanner(message, type) {
         banner.textContent = message;
