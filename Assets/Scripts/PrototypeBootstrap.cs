@@ -19,14 +19,21 @@ namespace DoNotOpen.Prototype
         {
             Application.targetFrameRate = 120;
             QualitySettings.antiAliasing = 0;
+            // 让独立运行版本直接铺满屏幕；网页版本的全屏由主界面的按钮触发。
+            Screen.fullScreenMode = FullScreenMode.FullScreenWindow;
+            Screen.fullScreen = true;
 
             Texture2D worldTexture = LoadPixelTexture("PixelArt/world-tiles");
             Texture2D playerTexture = LoadPixelTexture("PixelArt/player-idle");
             Texture2D caveEntranceTexture = LoadPixelTexture("PixelArt/cave-entrance");
+            Font pixelFont = Resources.Load<Font>("Fonts/ark-pixel-12px");
 
-            if (worldTexture == null || playerTexture == null || caveEntranceTexture == null)
+            if (worldTexture == null ||
+                playerTexture == null ||
+                caveEntranceTexture == null ||
+                pixelFont == null)
             {
-                Debug.LogError("One or more cozy farm pixel-art sheets could not be loaded.");
+                Debug.LogError("One or more pixel-art resources could not be loaded.");
                 return;
             }
 
@@ -41,7 +48,7 @@ namespace DoNotOpen.Prototype
             follow.Initialize(player.transform, world.MapBounds);
 
             PrototypeHud hud = gameObject.AddComponent<PrototypeHud>();
-            hud.Initialize(world, player);
+            hud.Initialize(world, player, pixelFont);
         }
 
         private static Camera BuildCamera()

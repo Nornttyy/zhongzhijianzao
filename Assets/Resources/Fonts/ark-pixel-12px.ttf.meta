@@ -1,0 +1,21 @@
+fileFormatVersion: 2
+guid: b83dd165a28bc4d8292b0cd422b12d18
+TrueTypeFontImporter:
+  externalObjects: {}
+  serializedVersion: 4
+  fontSize: 16
+  forceTextureCase: -2
+  characterSpacing: 0
+  characterPadding: 1
+  includeFontData: 1
+  fontNames:
+  - Ark Pixel 12px Prop zh_cn
+  fallbackFontReferences: []
+  customCharacters:
+  fontRenderingMode: 3
+  ascentCalculationMode: 1
+  useLegacyBoundsCalculation: 0
+  shouldRoundAdvanceValue: 1
+  userData:
+  assetBundleName:
+  assetBundleVariant:
