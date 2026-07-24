@@ -421,6 +421,26 @@
       font-size: 13px;
     }
 
+    #coin-display {
+      position: absolute;
+      top: 18px;
+      right: 18px;
+      z-index: 5;
+      display: none;
+      min-width: 160px;
+      border: 3px solid #172719;
+      padding: 7px 12px 5px;
+      background: rgba(27, 43, 29, 0.96);
+      color: var(--accent);
+      font-size: 18px;
+      line-height: 24px;
+      text-align: center;
+    }
+
+    #coin-display.visible {
+      display: block;
+    }
+
     #banner {
       position: absolute;
       top: 14px;
@@ -486,6 +506,7 @@
       <div id="status">准备中…</div>
     </section>
 
+    <div id="coin-display" aria-live="polite">金币: 100</div>
     <div id="banner" role="alert"></div>
   </main>
 
@@ -498,10 +519,17 @@
     const progress = document.querySelector("#progress");
     const status = document.querySelector("#status");
     const banner = document.querySelector("#banner");
+    const coinDisplay = document.querySelector("#coin-display");
+
+    window.setCoinDisplay = value => {
+      const amount = Number(value);
+      coinDisplay.textContent = "金币: " + (Number.isFinite(amount) ? amount.toLocaleString("zh-CN") : "0");
+      coinDisplay.classList.add("visible");
+    };
 
     // 每次发布都更换版本号，避免 UnityCache/浏览器继续使用旧的同名构建文件。
     const buildUrl = "Build";
-    const buildVersion = "20260724-coins3";
+    const buildVersion = "20260724-coins4";
     const assetUrl = file => buildUrl + "/" + file + "?v=" + buildVersion;
     const loaderUrl = assetUrl("docs.loader.js");
     const config = {
@@ -556,6 +584,7 @@
 
     startGame.addEventListener("click", () => {
       menu.classList.add("hidden");
+      coinDisplay.classList.add("visible");
       bootGame();
     });
 
