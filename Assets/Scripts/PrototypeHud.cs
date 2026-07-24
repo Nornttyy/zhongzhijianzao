@@ -31,7 +31,7 @@ namespace DoNotOpen.Prototype
             pixelFont = interfaceFont;
             if (pixelFont != null)
             {
-                const string hudCharacters = "种植建造金币WASDEBI互动背包坐标0123456789:，";
+                const string hudCharacters = "种植建造金币WASDEI互动背包商店右键坐标0123456789:，";
                 pixelFont.RequestCharactersInTexture(hudCharacters, 24, FontStyle.Normal);
             }
 
@@ -63,7 +63,7 @@ namespace DoNotOpen.Prototype
             }
 
             GUI.Label(new Rect(32f, 27f, 212f, 25f), "种植建造", titleStyle);
-            GUI.Label(new Rect(32f, 55f, 300f, 20f), "WASD 移动 · E 互动 · B 建造 · I 背包", bodyStyle);
+            GUI.Label(new Rect(32f, 55f, 340f, 20f), "WASD 移动 · E 背包 · I 商店 · 右键互动/建造", bodyStyle);
 
             const float coinPanelWidth = 160f;
             Rect coinPanel = new Rect(Screen.width - coinPanelWidth - 18f, 18f, coinPanelWidth, 38f);
@@ -218,7 +218,7 @@ namespace DoNotOpen.Prototype
 
             GUI.Label(
                 new Rect(card.x + 20f, card.y + 270f, card.width - 40f, 28f),
-                "WASD 移动 · E 互动 · B 建造 · I 背包",
+                "WASD 移动 · E 背包 · I 商店 · 右键互动/建造",
                 menuControlsStyle);
             GUI.color = Color.white;
         }
