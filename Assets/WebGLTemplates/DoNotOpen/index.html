@@ -642,6 +642,13 @@
       updateInventory();
     };
 
+    window.notifyBuildingPlaced = buildingId => {
+      if (Object.prototype.hasOwnProperty.call(ownedBuildings, buildingId) && ownedBuildings[buildingId] > 0) {
+        ownedBuildings[buildingId] -= 1;
+        updateInventory();
+      }
+    };
+
     function updateInventory() {
       inventoryView.innerHTML = "金币：" + coinAmount.toLocaleString("zh-CN") +
         "<br>训兵营：" + ownedBuildings.training_camp +
@@ -689,7 +696,7 @@
 
     // 每次发布都更换版本号，避免 UnityCache/浏览器继续使用旧的同名构建文件。
     const buildUrl = "Build";
-    const buildVersion = "20260724-hotkeys4";
+    const buildVersion = "20260724-hotkeys5";
     const assetUrl = file => buildUrl + "/" + file + "?v=" + buildVersion;
     const loaderUrl = assetUrl("{{{ LOADER_FILENAME }}}");
     const config = {
