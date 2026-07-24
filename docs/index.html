@@ -535,6 +535,34 @@
       max-width: 396px;
     }
 
+    #persistent-hotbar {
+      position: absolute;
+      top: 18px;
+      left: 18px;
+      z-index: 5;
+      display: none;
+      grid-template-columns: repeat(9, 34px);
+      gap: 3px;
+      padding: 3px;
+      background: rgba(27, 27, 27, 0.82);
+    }
+
+    #persistent-hotbar.visible {
+      display: grid;
+    }
+
+    #persistent-hotbar .inventory-slot {
+      width: 34px;
+      min-height: 34px;
+      aspect-ratio: 1;
+      font-size: 13px;
+    }
+
+    #persistent-hotbar .inventory-slot.selected {
+      border-color: #fff2a8;
+      box-shadow: inset 2px 2px 0 #fff2a8, inset -2px -2px 0 #b69a42;
+    }
+
     .inventory-slot {
       position: relative;
       display: grid;
@@ -665,6 +693,7 @@
     </section>
 
     <div id="coin-display" aria-live="polite">金币: 100</div>
+    <div id="persistent-hotbar" aria-label="快捷栏"></div>
     <div id="hotkey-hud">E 背包 · I 商店 · 右键 互动/建造</div>
     <div id="hotkey-feedback" aria-live="polite"></div>
     <section id="utility-panel" aria-label="背包和商店">
@@ -697,6 +726,7 @@
     const status = document.querySelector("#status");
     const banner = document.querySelector("#banner");
     const coinDisplay = document.querySelector("#coin-display");
+    const persistentHotbar = document.querySelector("#persistent-hotbar");
     const hotkeyHud = document.querySelector("#hotkey-hud");
     const hotkeyFeedback = document.querySelector("#hotkey-feedback");
     const utilityPanel = document.querySelector("#utility-panel");
@@ -707,6 +737,7 @@
     const hotbarGrid = document.querySelector("#hotbar-grid");
     const shopView = document.querySelector("#shop-view");
     let utilityMode = null;
+    let selectedHotbarIndex = 0;
     let coinAmount = 100;
     const ownedBuildings = {
       training_camp: 0,
@@ -749,7 +780,14 @@
         : "<div class=\"inventory-slot\"></div>");
       while (slots.length < 27) slots.push("<div class=\"inventory-slot\"></div>");
       inventoryGrid.innerHTML = slots.join("");
-      hotbarGrid.innerHTML = Array.from({ length: 9 }, () => "<div class=\"inventory-slot\"></div>").join("");
+      const hotbarMarkup = Array.from({ length: 9 }, (_, index) =>
+        "<div class=\"inventory-slot " + (index === selectedHotbarIndex ? "selected" : "") + "\">" +
+        (index < 3 && items[index].count > 0
+          ? "<span class=\"slot-icon\">" + items[index].icon + "</span><span class=\"slot-count\">" + items[index].count + "</span>"
+          : "") +
+        "</div>").join("");
+      hotbarGrid.innerHTML = hotbarMarkup;
+      persistentHotbar.innerHTML = hotbarMarkup;
     }
 
     function openUtility(mode) {
@@ -796,7 +834,7 @@
 
     // 每次发布都更换版本号，避免 UnityCache/浏览器继续使用旧的同名构建文件。
     const buildUrl = "Build";
-    const buildVersion = "20260724-hotkeys6";
+    const buildVersion = "20260724-inventory2";
     const assetUrl = file => buildUrl + "/" + file + "?v=" + buildVersion;
     const loaderUrl = assetUrl("docs.loader.js");
     const config = {
@@ -852,6 +890,7 @@
     startGame.addEventListener("click", () => {
       menu.classList.add("hidden");
       coinDisplay.classList.add("visible");
+      persistentHotbar.classList.add("visible");
       hotkeyHud.classList.add("visible");
       bootGame();
     });
@@ -866,6 +905,10 @@
       if (key === "i") {
         event.preventDefault();
         utilityMode === "shop" ? closeUtility() : openUtility("shop");
+      }
+      if (/^[1-9]$/.test(key)) {
+        selectedHotbarIndex = Number(key) - 1;
+        updateInventory();
       }
       if (event.key === "Escape") {
         event.preventDefault();
