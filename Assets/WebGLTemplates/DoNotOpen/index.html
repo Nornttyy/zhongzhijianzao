@@ -476,11 +476,12 @@
       left: 50%;
       z-index: 10;
       display: none;
-      width: min(420px, 86vw);
+      width: min(520px, 92vw);
       transform: translate(-50%, -50%);
-      border: 3px solid var(--line);
-      padding: 22px;
-      background: rgba(27, 43, 29, 0.97);
+      border: 4px solid #b0a77c;
+      padding: 14px;
+      background: #3c3c3c;
+      box-shadow: inset 0 0 0 3px #191919, 0 6px 0 #151515;
       color: var(--muted);
       text-align: center;
     }
@@ -489,16 +490,91 @@
       display: block;
     }
 
+    #utility-title-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+      padding: 0 4px;
+    }
+
     #utility-title {
-      margin-bottom: 14px;
       color: var(--ink);
-      font-size: 25px;
+      font-size: 22px;
+    }
+
+    #utility-close {
+      border: 2px solid #1b1b1b;
+      width: 32px;
+      height: 30px;
+      padding: 0;
+      background: #696969;
+      color: #ffffff;
+      font: inherit;
+      font-size: 20px;
+      line-height: 24px;
+      cursor: pointer;
+    }
+
+    #utility-close:hover {
+      background: #8a8a8a;
     }
 
     #inventory-view,
     #shop-view {
       font-size: 15px;
       line-height: 1.9;
+    }
+
+    .inventory-grid,
+    .hotbar-grid {
+      display: grid;
+      grid-template-columns: repeat(9, minmax(0, 1fr));
+      gap: 4px;
+      margin: 0 auto;
+      max-width: 396px;
+    }
+
+    .inventory-slot {
+      position: relative;
+      display: grid;
+      aspect-ratio: 1;
+      place-items: center;
+      border: 2px solid #1b1b1b;
+      background: #777777;
+      box-shadow: inset 2px 2px 0 #a1a1a1, inset -2px -2px 0 #4b4b4b;
+      color: #ffffff;
+      font-size: 17px;
+    }
+
+    .inventory-slot.filled {
+      background: #5a5a5a;
+    }
+
+    .slot-icon {
+      color: #f5df8c;
+      font-size: 20px;
+      text-shadow: 2px 2px 0 #262626;
+    }
+
+    .slot-count {
+      position: absolute;
+      right: 3px;
+      bottom: 0;
+      color: #ffffff;
+      font-size: 12px;
+      text-shadow: 2px 2px 0 #222222;
+    }
+
+    .hotbar-label,
+    .inventory-tip {
+      margin: 9px 0 5px;
+      color: #d0d0d0;
+      font-size: 12px;
+    }
+
+    .inventory-tip {
+      margin: 9px 0 0;
     }
 
     #shop-view {
@@ -592,8 +668,16 @@
     <div id="hotkey-hud">E 背包 · I 商店 · 右键 互动/建造</div>
     <div id="hotkey-feedback" aria-live="polite"></div>
     <section id="utility-panel" aria-label="背包和商店">
-      <div id="utility-title">背包</div>
-      <div id="inventory-view"></div>
+      <div id="utility-title-row">
+        <div id="utility-title">背包</div>
+        <button id="utility-close" type="button" aria-label="关闭">×</button>
+      </div>
+      <div id="inventory-view">
+        <div class="inventory-grid" id="inventory-grid"></div>
+        <div class="hotbar-label">快捷栏</div>
+        <div class="hotbar-grid" id="hotbar-grid"></div>
+        <div class="inventory-tip">按 E 或 Esc 关闭 · 购买建筑后按右键放置</div>
+      </div>
       <div id="shop-view">
         <button class="shop-button" data-building="training_camp" data-price="80" data-label="训兵营">训兵营 · 80 金币</button>
         <button class="shop-button" data-building="wall" data-price="10" data-label="城墙">城墙 · 10 金币</button>
@@ -617,8 +701,12 @@
     const hotkeyFeedback = document.querySelector("#hotkey-feedback");
     const utilityPanel = document.querySelector("#utility-panel");
     const utilityTitle = document.querySelector("#utility-title");
+    const utilityClose = document.querySelector("#utility-close");
     const inventoryView = document.querySelector("#inventory-view");
+    const inventoryGrid = document.querySelector("#inventory-grid");
+    const hotbarGrid = document.querySelector("#hotbar-grid");
     const shopView = document.querySelector("#shop-view");
+    let utilityMode = null;
     let coinAmount = 100;
     const ownedBuildings = {
       training_camp: 0,
@@ -650,15 +738,23 @@
     };
 
     function updateInventory() {
-      inventoryView.innerHTML = "金币：" + coinAmount.toLocaleString("zh-CN") +
-        "<br>训兵营：" + ownedBuildings.training_camp +
-        "　城墙：" + ownedBuildings.wall +
-        "　城门：" + ownedBuildings.gate +
-        "<br><small>购买建筑后按右键放置</small>";
+      const items = [
+        { icon: "营", count: ownedBuildings.training_camp },
+        { icon: "墙", count: ownedBuildings.wall },
+        { icon: "门", count: ownedBuildings.gate }
+      ];
+      const slots = items.map(item => item.count > 0
+        ? "<div class=\"inventory-slot filled\"><span class=\"slot-icon\">" + item.icon +
+          "</span><span class=\"slot-count\">" + item.count + "</span></div>"
+        : "<div class=\"inventory-slot\"></div>");
+      while (slots.length < 27) slots.push("<div class=\"inventory-slot\"></div>");
+      inventoryGrid.innerHTML = slots.join("");
+      hotbarGrid.innerHTML = Array.from({ length: 9 }, () => "<div class=\"inventory-slot\"></div>").join("");
     }
 
     function openUtility(mode) {
       utilityPanel.classList.add("visible");
+      utilityMode = mode;
       const isShop = mode === "shop";
       utilityTitle.textContent = isShop ? "商店" : "背包";
       inventoryView.style.display = isShop ? "none" : "block";
@@ -668,7 +764,11 @@
 
     function closeUtility() {
       utilityPanel.classList.remove("visible");
+      utilityMode = null;
+      canvas.focus();
     }
+
+    utilityClose.addEventListener("click", closeUtility);
 
     document.querySelectorAll("[data-building]").forEach(button => {
       button.addEventListener("click", () => {
@@ -696,7 +796,7 @@
 
     // 每次发布都更换版本号，避免 UnityCache/浏览器继续使用旧的同名构建文件。
     const buildUrl = "Build";
-    const buildVersion = "20260724-hotkeys5";
+    const buildVersion = "20260724-hotkeys6";
     const assetUrl = file => buildUrl + "/" + file + "?v=" + buildVersion;
     const loaderUrl = assetUrl("{{{ LOADER_FILENAME }}}");
     const config = {
@@ -759,10 +859,19 @@
     document.addEventListener("keydown", event => {
       if (!menu.classList.contains("hidden")) return;
       const key = event.key.toLowerCase();
-      if (key === "e") openUtility("inventory");
-      if (key === "i") openUtility("shop");
-      if (event.key === "Escape") closeUtility();
-    });
+      if (key === "e") {
+        event.preventDefault();
+        utilityMode === "inventory" ? closeUtility() : openUtility("inventory");
+      }
+      if (key === "i") {
+        event.preventDefault();
+        utilityMode === "shop" ? closeUtility() : openUtility("shop");
+      }
+      if (event.key === "Escape") {
+        event.preventDefault();
+        closeUtility();
+      }
+    }, true);
 
     canvas.addEventListener("pointerdown", () => canvas.focus());
     canvas.addEventListener("contextmenu", event => {
