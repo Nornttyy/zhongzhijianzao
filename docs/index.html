@@ -895,7 +895,7 @@
       <div id="status">准备中…</div>
     </section>
 
-    <div id="coin-display" aria-live="polite"><span class="coin-label">金币</span><span class="coin-separator">:</span><span class="coin-sprite"></span><span id="coin-amount">100</span></div>
+    <div id="coin-display" aria-live="polite"><span class="coin-sprite"></span><span class="coin-separator">:</span><span id="coin-amount">100</span></div>
     <div id="persistent-hotbar" aria-label="快捷栏"></div>
     <div id="hotkey-hud">E 背包 · I 商店 · 右键互动</div>
     <div id="hotkey-feedback" aria-live="polite"></div>
@@ -1049,7 +1049,7 @@
 
     // 每次发布都更换版本号，避免 UnityCache/浏览器继续使用旧的同名构建文件。
     const buildUrl = "Build";
-    const buildVersion = "20260724-shop7";
+    const buildVersion = "20260724-shop8";
     const assetUrl = file => buildUrl + "/" + file + "?v=" + buildVersion;
     const loaderUrl = assetUrl("docs.loader.js");
     const config = {
