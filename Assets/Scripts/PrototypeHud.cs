@@ -1,4 +1,7 @@
 using UnityEngine;
+#if UNITY_WEBGL && !UNITY_EDITOR
+using System.Runtime.InteropServices;
+#endif
 
 namespace DoNotOpen.Prototype
 {
@@ -20,6 +23,12 @@ namespace DoNotOpen.Prototype
         private Texture2D menuCardTexture;
         private Texture2D menuButtonTexture;
         private bool showMainMenu;
+        private int lastWebCoin = -1;
+
+#if UNITY_WEBGL && !UNITY_EDITOR
+        [DllImport("__Internal")]
+        private static extern void SetCoinDisplay(int coins);
+#endif
 
         public void Initialize(
             ProceduralWorld generatedWorld,
@@ -41,6 +50,19 @@ namespace DoNotOpen.Prototype
             {
                 player.enabled = false;
             }
+        }
+
+        private void Update()
+        {
+            if (player == null || player.Coins == lastWebCoin)
+            {
+                return;
+            }
+
+            lastWebCoin = player.Coins;
+#if UNITY_WEBGL && !UNITY_EDITOR
+            SetCoinDisplay(lastWebCoin);
+#endif
         }
 
         private void OnGUI()
