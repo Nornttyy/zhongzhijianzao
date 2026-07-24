@@ -29,6 +29,11 @@ namespace DoNotOpen.Prototype
             world = generatedWorld;
             player = controlledPlayer;
             pixelFont = interfaceFont;
+            if (pixelFont != null)
+            {
+                const string hudCharacters = "种植建造金币WASD移动R返回坐标0123456789:，";
+                pixelFont.RequestCharactersInTexture(hudCharacters, 24, FontStyle.Normal);
+            }
 
             // 网页入口已经有主界面，避免网页菜单和 Unity 菜单重叠；独立运行时显示 Unity 菜单。
             showMainMenu = Application.platform != RuntimePlatform.WebGLPlayer;
@@ -45,6 +50,10 @@ namespace DoNotOpen.Prototype
                 return;
             }
 
+            // Reset IMGUI state so labels cannot inherit a transparent color
+            // from a previous panel or the web loading overlay.
+            GUI.color = Color.white;
+            GUI.contentColor = Color.white;
             EnsureStyles();
 
             if (showMainMenu)
