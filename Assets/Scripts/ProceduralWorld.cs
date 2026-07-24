@@ -208,10 +208,26 @@ namespace DoNotOpen.Prototype
                 chunk != null &&
                 chunk.Mesh != null)
             {
+                RemoveDecorationAt(chunk, tile);
                 chunk.Mesh.uv = BuildChunkUvs(chunkCoordinate);
             }
 
             return true;
+        }
+
+        private static void RemoveDecorationAt(GeneratedWorldChunk chunk, Vector2Int tile)
+        {
+            if (chunk == null)
+            {
+                return;
+            }
+
+            Transform decoration = chunk.transform.Find(
+                "Decoration " + tile.x + ", " + tile.y);
+            if (decoration != null)
+            {
+                Destroy(decoration.gameObject);
+            }
         }
 
         public bool ShouldSwimAt(Vector2 position)
