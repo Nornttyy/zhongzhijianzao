@@ -435,10 +435,40 @@
       font-size: 18px;
       line-height: 24px;
       text-align: center;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
     }
 
     #coin-display.visible {
-      display: block;
+      display: flex;
+    }
+
+    .coin-sprite {
+      display: inline-block;
+      width: 24px;
+      height: 24px;
+      flex: 0 0 24px;
+      background-image: url("shop-materials.png");
+      background-repeat: no-repeat;
+      background-size: 800% 400%;
+      background-position: 85.7143% 0% !important;
+      image-rendering: pixelated;
+      vertical-align: middle;
+    }
+
+    .coin-small {
+      width: 18px;
+      height: 18px;
+      flex-basis: 18px;
+      background-size: 800% 400%;
+    }
+
+    .price {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      color: #38552f;
     }
 
     #hotkey-hud,
@@ -836,7 +866,7 @@
       <div id="status">准备中…</div>
     </section>
 
-    <div id="coin-display" aria-live="polite">金币: 100</div>
+    <div id="coin-display" aria-live="polite"><span class="coin-sprite"></span><span id="coin-amount">100</span></div>
     <div id="persistent-hotbar" aria-label="快捷栏"></div>
     <div id="hotkey-hud">E 背包 · I 商店 · 右键互动</div>
     <div id="hotkey-feedback" aria-live="polite"></div>
@@ -855,16 +885,16 @@
         <div class="shop-intro">用金币购买种子和农场用品，商品会进入背包与左上角快捷栏。</div>
         <div class="shop-grid">
           <button class="shop-button" data-item="wheat_seed" data-price="5" data-label="小麦种子">
-            <span class="shop-icon sprite-r0-c0"></span><span class="shop-copy"><strong>小麦种子</strong><small>种下后可收获小麦 · 5 金币</small></span>
+            <span class="shop-icon sprite-r0-c0"></span><span class="shop-copy"><strong>小麦种子</strong><small>种下后可收获小麦 · <span class="price"><span class="coin-sprite coin-small"></span>5</span></small></span>
           </button>
           <button class="shop-button" data-item="carrot_seed" data-price="8" data-label="胡萝卜种子">
-            <span class="shop-icon sprite-r0-c1"></span><span class="shop-copy"><strong>胡萝卜种子</strong><small>种下后可收获胡萝卜 · 8 金币</small></span>
+            <span class="shop-icon sprite-r0-c1"></span><span class="shop-copy"><strong>胡萝卜种子</strong><small>种下后可收获胡萝卜 · <span class="price"><span class="coin-sprite coin-small"></span>8</span></small></span>
           </button>
           <button class="shop-button" data-item="fertilizer" data-price="12" data-label="肥料">
-            <span class="shop-icon sprite-r0-c2"></span><span class="shop-copy"><strong>肥料</strong><small>提高耕地品质 · 12 金币</small></span>
+            <span class="shop-icon sprite-r0-c2"></span><span class="shop-copy"><strong>肥料</strong><small>提高耕地品质 · <span class="price"><span class="coin-sprite coin-small"></span>12</span></small></span>
           </button>
           <button class="shop-button" data-item="wood" data-price="15" data-label="木材">
-            <span class="shop-icon sprite-r0-c3"></span><span class="shop-copy"><strong>木材</strong><small>建造系统的基础材料 · 15 金币</small></span>
+            <span class="shop-icon sprite-r0-c3"></span><span class="shop-copy"><strong>木材</strong><small>建造系统的基础材料 · <span class="price"><span class="coin-sprite coin-small"></span>15</span></small></span>
           </button>
         </div>
       </div>
@@ -882,6 +912,7 @@
     const status = document.querySelector("#status");
     const banner = document.querySelector("#banner");
     const coinDisplay = document.querySelector("#coin-display");
+    const coinAmountLabel = document.querySelector("#coin-amount");
     const persistentHotbar = document.querySelector("#persistent-hotbar");
     const hotkeyHud = document.querySelector("#hotkey-hud");
     const hotkeyFeedback = document.querySelector("#hotkey-feedback");
@@ -913,7 +944,7 @@
     window.setCoinDisplay = value => {
       const amount = Number(value);
       coinAmount = Number.isFinite(amount) ? amount : 0;
-      coinDisplay.textContent = "金币: " + coinAmount.toLocaleString("zh-CN");
+      coinAmountLabel.textContent = coinAmount.toLocaleString("zh-CN");
       coinDisplay.classList.add("visible");
       updateInventory();
     };
@@ -989,7 +1020,7 @@
 
     // 每次发布都更换版本号，避免 UnityCache/浏览器继续使用旧的同名构建文件。
     const buildUrl = "Build";
-    const buildVersion = "20260724-shop4";
+    const buildVersion = "20260724-shop5";
     const assetUrl = file => buildUrl + "/" + file + "?v=" + buildVersion;
     const loaderUrl = assetUrl("{{{ LOADER_FILENAME }}}");
     const config = {
