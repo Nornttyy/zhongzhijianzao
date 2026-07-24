@@ -7,6 +7,7 @@ namespace DoNotOpen.Prototype
     {
         private const float MovementRadius = 0.2f;
         private const float BoundaryMargin = 0.22f;
+        private const int StartingCoins = 100;
 
         public float Speed { get; set; } = 3.6f;
         public float SwimSpeedMultiplier { get; set; } = 0.45f;
@@ -15,6 +16,28 @@ namespace DoNotOpen.Prototype
         public Vector2 Facing { get; private set; } = Vector2.down;
         public ProceduralWorld World { get; set; }
         public bool IsSwimming { get; private set; }
+        public int Coins { get; private set; } = StartingCoins;
+
+        public void AddCoins(int amount)
+        {
+            if (amount <= 0)
+            {
+                return;
+            }
+
+            Coins += amount;
+        }
+
+        public bool TrySpendCoins(int amount)
+        {
+            if (amount <= 0 || Coins < amount)
+            {
+                return false;
+            }
+
+            Coins -= amount;
+            return true;
+        }
 
         private Rigidbody2D body;
         private CircleCollider2D collisionShape;
