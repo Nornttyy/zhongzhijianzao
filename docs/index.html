@@ -1064,6 +1064,7 @@
     let utilityMode = null;
     let selectedHotbarIndex = 0;
     let coinAmount = 100;
+    const hotbarItemIds = ["wheat_seed", "carrot_seed", "fertilizer", "wood"];
     const shopInventory = {
       wheat_seed: 0,
       carrot_seed: 0,
@@ -1092,6 +1093,12 @@
         shopInventory[itemId] = Math.max(0, Number(count) || 0);
         updateInventory();
       }
+    };
+
+    window.notifyFarmingFeedback = message => showHotkeyFeedback(message);
+    window.notifyHarvest = (itemId, coins) => {
+      const label = itemId === "carrot_seed" ? "胡萝卜" : "小麦";
+      showHotkeyFeedback("收获" + label + "  +" + Number(coins || 0) + "金币");
     };
 
     function updateInventory() {
@@ -1274,6 +1281,12 @@
       if (/^[1-9]$/.test(key)) {
         selectedHotbarIndex = Number(key) - 1;
         updateInventory();
+        if (unityInstance && hotbarItemIds[selectedHotbarIndex]) {
+          unityInstance.SendMessage(
+            "Cozy Farm Bootstrap",
+            "SelectHotbarItem",
+            hotbarItemIds[selectedHotbarIndex]);
+        }
       }
       if (event.key === "Escape") {
         event.preventDefault();
