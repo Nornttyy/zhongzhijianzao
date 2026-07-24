@@ -584,10 +584,31 @@
     }
 
     .slot-icon {
-      color: #f5df8c;
-      font-size: 28px;
-      text-shadow: 2px 2px 0 #262626;
+      display: block;
+      width: 34px;
+      height: 34px;
+      background-image: url("shop-materials.png");
+      background-repeat: no-repeat;
+      background-size: 800% 400%;
+      image-rendering: pixelated;
+      font-size: 0;
     }
+
+    .sprite-r0-c0 { background-position: 0% 0%; }
+    .sprite-r0-c1 { background-position: 14.2857% 0%; }
+    .sprite-r0-c2 { background-position: 28.5714% 0%; }
+    .sprite-r0-c3 { background-position: 42.8571% 0%; }
+    .sprite-r0-c4 { background-position: 57.1429% 0%; }
+    .sprite-r0-c5 { background-position: 71.4286% 0%; }
+    .sprite-r0-c6 { background-position: 85.7143% 0%; }
+    .sprite-r1-c0 { background-position: 0% 33.3333%; }
+    .sprite-r1-c1 { background-position: 14.2857% 33.3333%; }
+    .sprite-r1-c2 { background-position: 28.5714% 33.3333%; }
+    .sprite-r1-c3 { background-position: 42.8571% 33.3333%; }
+    .sprite-r1-c4 { background-position: 57.1429% 33.3333%; }
+    .sprite-r1-c5 { background-position: 71.4286% 33.3333%; }
+    .sprite-r2-c0 { background-position: 0% 66.6667%; }
+    .sprite-r2-c1 { background-position: 14.2857% 66.6667%; }
 
     .slot-count {
       position: absolute;
@@ -661,8 +682,12 @@
       place-items: center;
       border: 3px solid #3a4c2a;
       background: #6f8e46;
-      color: #fff4ab;
-      font-size: 28px;
+      background-image: url("shop-materials.png");
+      background-repeat: no-repeat;
+      background-size: 800% 400%;
+      image-rendering: pixelated;
+      color: transparent;
+      font-size: 0;
       text-align: center;
     }
 
@@ -830,16 +855,16 @@
         <div class="shop-intro">用金币购买种子和农场用品，商品会进入背包与左上角快捷栏。</div>
         <div class="shop-grid">
           <button class="shop-button" data-item="wheat_seed" data-price="5" data-label="小麦种子">
-            <span class="shop-icon">麦</span><span class="shop-copy"><strong>小麦种子</strong><small>种下后可收获小麦 · 5 金币</small></span>
+            <span class="shop-icon sprite-r0-c0"></span><span class="shop-copy"><strong>小麦种子</strong><small>种下后可收获小麦 · 5 金币</small></span>
           </button>
           <button class="shop-button" data-item="carrot_seed" data-price="8" data-label="胡萝卜种子">
-            <span class="shop-icon">胡</span><span class="shop-copy"><strong>胡萝卜种子</strong><small>种下后可收获胡萝卜 · 8 金币</small></span>
+            <span class="shop-icon sprite-r0-c1"></span><span class="shop-copy"><strong>胡萝卜种子</strong><small>种下后可收获胡萝卜 · 8 金币</small></span>
           </button>
           <button class="shop-button" data-item="fertilizer" data-price="12" data-label="肥料">
-            <span class="shop-icon">肥</span><span class="shop-copy"><strong>肥料</strong><small>提高耕地品质 · 12 金币</small></span>
+            <span class="shop-icon sprite-r0-c2"></span><span class="shop-copy"><strong>肥料</strong><small>提高耕地品质 · 12 金币</small></span>
           </button>
           <button class="shop-button" data-item="wood" data-price="15" data-label="木材">
-            <span class="shop-icon">木</span><span class="shop-copy"><strong>木材</strong><small>建造系统的基础材料 · 15 金币</small></span>
+            <span class="shop-icon sprite-r0-c3"></span><span class="shop-copy"><strong>木材</strong><small>建造系统的基础材料 · 15 金币</small></span>
           </button>
         </div>
       </div>
@@ -902,21 +927,21 @@
 
     function updateInventory() {
       const items = [
-        { icon: "麦", count: shopInventory.wheat_seed },
-        { icon: "胡", count: shopInventory.carrot_seed },
-        { icon: "肥", count: shopInventory.fertilizer },
-        { icon: "木", count: shopInventory.wood }
+        { sprite: "sprite-r0-c0", count: shopInventory.wheat_seed },
+        { sprite: "sprite-r0-c1", count: shopInventory.carrot_seed },
+        { sprite: "sprite-r0-c2", count: shopInventory.fertilizer },
+        { sprite: "sprite-r0-c3", count: shopInventory.wood }
       ];
       const slots = items.map(item => item.count > 0
-        ? "<div class=\"inventory-slot filled\"><span class=\"slot-icon\">" + item.icon +
-          "</span><span class=\"slot-count\">" + item.count + "</span></div>"
+        ? "<div class=\"inventory-slot filled\"><span class=\"slot-icon " + item.sprite + "\"></span>" +
+          "<span class=\"slot-count\">" + item.count + "</span></div>"
         : "<div class=\"inventory-slot\"></div>");
       while (slots.length < 27) slots.push("<div class=\"inventory-slot\"></div>");
       inventoryGrid.innerHTML = slots.join("");
       const hotbarMarkup = Array.from({ length: 9 }, (_, index) =>
         "<div class=\"inventory-slot " + (index === selectedHotbarIndex ? "selected" : "") + "\">" +
         (index < items.length && items[index].count > 0
-          ? "<span class=\"slot-icon\">" + items[index].icon + "</span><span class=\"slot-count\">" + items[index].count + "</span>"
+          ? "<span class=\"slot-icon " + items[index].sprite + "\"></span><span class=\"slot-count\">" + items[index].count + "</span>"
           : "") +
         "</div>").join("");
       hotbarGrid.innerHTML = hotbarMarkup;
@@ -964,7 +989,7 @@
 
     // 每次发布都更换版本号，避免 UnityCache/浏览器继续使用旧的同名构建文件。
     const buildUrl = "Build";
-    const buildVersion = "20260724-shop2";
+    const buildVersion = "20260724-shop3";
     const assetUrl = file => buildUrl + "/" + file + "?v=" + buildVersion;
     const loaderUrl = assetUrl("docs.loader.js");
     const config = {
