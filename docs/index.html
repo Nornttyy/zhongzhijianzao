@@ -1100,19 +1100,8 @@
     let utilityMode = null;
     let selectedHotbarIndex = 0;
     let coinAmount = 100;
-    const inventorySlots = ["wheat_crop", "carrot_crop"]
-      .concat(Array(25).fill(null));
-    const hotbarSlots = [
-      "wheat_seed",
-      "carrot_seed",
-      "fertilizer",
-      "wood",
-      null,
-      null,
-      null,
-      null,
-      null
-    ];
+    const inventorySlots = Array(27).fill(null);
+    const hotbarSlots = Array(9).fill(null);
     const shopInventory = {
       wheat_seed: 0,
       carrot_seed: 0,
@@ -1197,15 +1186,27 @@
     }
 
     function EnsureItemPlacement(itemId) {
-      if (!itemId || inventorySlots.includes(itemId) || hotbarSlots.includes(itemId)) {
+      if (!itemId) {
         return;
       }
-      const preferredSlots = itemId === "wheat_seed" ||
-        itemId === "carrot_seed" || itemId === "fertilizer" || itemId === "wood"
-        ? hotbarSlots
-        : inventorySlots;
-      const emptyIndex = preferredSlots.indexOf(null);
-      if (emptyIndex >= 0) preferredSlots[emptyIndex] = itemId;
+
+      const hotbarIndex = hotbarSlots.indexOf(itemId);
+      const inventoryIndex = inventorySlots.indexOf(itemId);
+      const count = shopInventory[itemId] || 0;
+      if (count <= 0) {
+        if (hotbarIndex >= 0) hotbarSlots[hotbarIndex] = null;
+        if (inventoryIndex >= 0) inventorySlots[inventoryIndex] = null;
+        return;
+      }
+      if (hotbarIndex >= 0 || inventoryIndex >= 0) return;
+
+      const hotbarEmptyIndex = hotbarSlots.indexOf(null);
+      if (hotbarEmptyIndex >= 0) {
+        hotbarSlots[hotbarEmptyIndex] = itemId;
+        return;
+      }
+      const inventoryEmptyIndex = inventorySlots.indexOf(null);
+      if (inventoryEmptyIndex >= 0) inventorySlots[inventoryEmptyIndex] = itemId;
     }
 
     let draggedSlot = null;
@@ -1344,7 +1345,7 @@
 
     // 每次发布都更换版本号，避免 UnityCache/浏览器继续使用旧的同名构建文件。
     const buildUrl = "Build";
-    const buildVersion = "20260724-farm6";
+    const buildVersion = "20260724-farm7";
     const assetUrl = file => buildUrl + "/" + file + "?v=" + buildVersion;
     const loaderUrl = assetUrl("docs.loader.js");
     const config = {
