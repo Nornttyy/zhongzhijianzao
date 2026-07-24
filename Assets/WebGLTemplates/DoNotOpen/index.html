@@ -1222,12 +1222,15 @@
       const filled = itemId && count > 0;
       const sprite = itemId ? getItemSprite(itemId) : "";
       const selected = slotType === "hotbar" && slotIndex === selectedHotbarIndex;
+      const countMarkup = filled && itemId !== "hoe"
+        ? "<span class=\"slot-count\">" + count + "</span>"
+        : "";
       return "<div class=\"inventory-slot" + (filled ? " filled" : "") +
         (selected ? " selected" : "") + "\" data-slot-type=\"" + slotType +
         "\" data-slot-index=\"" + slotIndex + "\" draggable=\"" +
         (filled ? "true" : "false") + "\">" +
         (filled
-          ? "<span class=\"slot-icon " + sprite + "\"></span><span class=\"slot-count\">" + count + "</span>"
+          ? "<span class=\"slot-icon " + sprite + "\"></span>" + countMarkup
           : "") +
         "</div>";
     }
@@ -1424,7 +1427,7 @@
 
     // 每次发布都更换版本号，避免 UnityCache/浏览器继续使用旧的同名构建文件。
     const buildUrl = "Build";
-    const buildVersion = "20260724-farm9";
+    const buildVersion = "20260724-farm10";
     const assetUrl = file => buildUrl + "/" + file + "?v=" + buildVersion;
     const loaderUrl = assetUrl("{{{ LOADER_FILENAME }}}");
     const config = {
