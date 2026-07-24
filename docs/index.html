@@ -1186,7 +1186,7 @@
           return;
         }
 
-        unityInstance.SendMessage("Cozy Farm Bootstrap", "BuyItem", id);
+        unityInstance.SendMessage("Prototype Bootstrap", "BuyItem", id);
         showHotkeyFeedback("正在购买" + label);
         openUtility("shop");
       });
@@ -1194,7 +1194,7 @@
 
     // 每次发布都更换版本号，避免 UnityCache/浏览器继续使用旧的同名构建文件。
     const buildUrl = "Build";
-    const buildVersion = "20260724-farm2";
+    const buildVersion = "20260724-farm3";
     const assetUrl = file => buildUrl + "/" + file + "?v=" + buildVersion;
     const loaderUrl = assetUrl("docs.loader.js");
     const config = {
@@ -1283,7 +1283,7 @@
         updateInventory();
         if (unityInstance && hotbarItemIds[selectedHotbarIndex]) {
           unityInstance.SendMessage(
-            "Cozy Farm Bootstrap",
+            "Prototype Bootstrap",
             "SelectHotbarItem",
             hotbarItemIds[selectedHotbarIndex]);
         }
