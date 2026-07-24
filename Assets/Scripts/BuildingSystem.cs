@@ -1,5 +1,8 @@
 using System.Collections.Generic;
 using UnityEngine;
+#if UNITY_WEBGL && !UNITY_EDITOR
+using System.Runtime.InteropServices;
+#endif
 
 namespace DoNotOpen.Prototype
 {
@@ -20,6 +23,11 @@ namespace DoNotOpen.Prototype
         private TopDownPlayer player;
         private ProceduralWorld world;
         private string selectedBuildingId;
+
+#if UNITY_WEBGL && !UNITY_EDITOR
+        [DllImport("__Internal")]
+        private static extern void NotifyBuildingPlaced(string buildingId);
+#endif
 
         public void Initialize(TopDownPlayer controlledPlayer, ProceduralWorld generatedWorld)
         {
@@ -91,9 +99,13 @@ namespace DoNotOpen.Prototype
                 return;
             }
 
-            CreateBuilding(selectedBuildingId, position);
-            ownedBuildings[selectedBuildingId]--;
-            if (ownedBuildings[selectedBuildingId] <= 0)
+            string placedBuildingId = selectedBuildingId;
+            CreateBuilding(placedBuildingId, position);
+            ownedBuildings[placedBuildingId]--;
+#if UNITY_WEBGL && !UNITY_EDITOR
+            NotifyBuildingPlaced(placedBuildingId);
+#endif
+            if (ownedBuildings[placedBuildingId] <= 0)
             {
                 selectedBuildingId = null;
             }
