@@ -646,6 +646,12 @@
       max-width: 720px;
     }
 
+    .hotbar-grid {
+      margin-top: 8px;
+      padding-top: 10px;
+      border-top: 3px solid #242424;
+    }
+
     #persistent-hotbar {
       position: absolute;
       top: 20px;
@@ -703,6 +709,20 @@
       box-shadow: inset 2px 2px 0 #a1a1a1, inset -2px -2px 0 #4b4b4b;
       color: #ffffff;
       font-size: 22px;
+      cursor: default;
+      user-select: none;
+    }
+
+    .inventory-slot[draggable="true"] {
+      cursor: grab;
+    }
+
+    .inventory-slot[draggable="true"]:active {
+      cursor: grabbing;
+    }
+
+    .inventory-slot.dragging {
+      opacity: 0.45;
     }
 
     .inventory-slot.filled {
@@ -1079,7 +1099,19 @@
     let utilityMode = null;
     let selectedHotbarIndex = 0;
     let coinAmount = 100;
-    const hotbarItemIds = ["wheat_seed", "carrot_seed", "fertilizer", "wood"];
+    const inventorySlots = ["wheat_crop", "carrot_crop"]
+      .concat(Array(25).fill(null));
+    const hotbarSlots = [
+      "wheat_seed",
+      "carrot_seed",
+      "fertilizer",
+      "wood",
+      null,
+      null,
+      null,
+      null,
+      null
+    ];
     const shopInventory = {
       wheat_seed: 0,
       carrot_seed: 0,
@@ -1108,6 +1140,7 @@
     window.setShopItemCount = (itemId, count) => {
       if (Object.prototype.hasOwnProperty.call(shopInventory, itemId)) {
         shopInventory[itemId] = Math.max(0, Number(count) || 0);
+        EnsureItemPlacement(itemId);
         updateInventory();
       }
     };
@@ -1116,6 +1149,7 @@
     window.notifyHarvest = (itemId, count) => {
       if (Object.prototype.hasOwnProperty.call(shopInventory, itemId)) {
         shopInventory[itemId] = Math.max(0, Number(count) || 0);
+        EnsureItemPlacement(itemId);
         updateInventory();
       }
       const label = itemId === "carrot_crop" ? "胡萝卜" : "小麦";
@@ -1123,29 +1157,99 @@
     };
 
     function updateInventory() {
-      const inventoryItems = [
-        { sprite: "sprite-r0-c0", count: shopInventory.wheat_seed },
-        { sprite: "sprite-r0-c1", count: shopInventory.carrot_seed },
-        { sprite: "sprite-r0-c2", count: shopInventory.fertilizer },
-        { sprite: "sprite-r0-c3", count: shopInventory.wood },
-        { sprite: "sprite-r2-c0", count: shopInventory.wheat_crop },
-        { sprite: "sprite-r2-c1", count: shopInventory.carrot_crop }
-      ];
-      const hotbarItems = inventoryItems.slice(0, 4);
-      const slots = inventoryItems.map(item => item.count > 0
-        ? "<div class=\"inventory-slot filled\"><span class=\"slot-icon " + item.sprite + "\"></span>" +
-          "<span class=\"slot-count\">" + item.count + "</span></div>"
-        : "<div class=\"inventory-slot\"></div>");
-      while (slots.length < 27) slots.push("<div class=\"inventory-slot\"></div>");
-      inventoryGrid.innerHTML = slots.join("");
-      const hotbarMarkup = Array.from({ length: 9 }, (_, index) =>
-        "<div class=\"inventory-slot " + (index === selectedHotbarIndex ? "selected" : "") + "\">" +
-        (index < hotbarItems.length && hotbarItems[index].count > 0
-          ? "<span class=\"slot-icon " + hotbarItems[index].sprite + "\"></span><span class=\"slot-count\">" + hotbarItems[index].count + "</span>"
-          : "") +
-        "</div>").join("");
+      inventoryGrid.innerHTML = inventorySlots
+        .map((itemId, index) => renderInventorySlot(itemId, "inventory", index))
+        .join("");
+      const hotbarMarkup = hotbarSlots
+        .map((itemId, index) => renderInventorySlot(itemId, "hotbar", index))
+        .join("");
       hotbarGrid.innerHTML = hotbarMarkup;
       persistentHotbar.innerHTML = hotbarMarkup;
+      bindInventoryDrag();
+    }
+
+    function renderInventorySlot(itemId, slotType, slotIndex) {
+      const count = itemId && shopInventory[itemId] ? shopInventory[itemId] : 0;
+      const filled = itemId && count > 0;
+      const sprite = itemId ? getItemSprite(itemId) : "";
+      const selected = slotType === "hotbar" && slotIndex === selectedHotbarIndex;
+      return "<div class=\"inventory-slot" + (filled ? " filled" : "") +
+        (selected ? " selected" : "") + "\" data-slot-type=\"" + slotType +
+        "\" data-slot-index=\"" + slotIndex + "\" draggable=\"" +
+        (filled ? "true" : "false") + "\">" +
+        (filled
+          ? "<span class=\"slot-icon " + sprite + "\"></span><span class=\"slot-count\">" + count + "</span>"
+          : "") +
+        "</div>";
+    }
+
+    function getItemSprite(itemId) {
+      const sprites = {
+        wheat_seed: "sprite-r0-c0",
+        carrot_seed: "sprite-r0-c1",
+        fertilizer: "sprite-r0-c2",
+        wood: "sprite-r0-c3",
+        wheat_crop: "sprite-r2-c0",
+        carrot_crop: "sprite-r2-c1"
+      };
+      return sprites[itemId] || "";
+    }
+
+    function EnsureItemPlacement(itemId) {
+      if (!itemId || inventorySlots.includes(itemId) || hotbarSlots.includes(itemId)) {
+        return;
+      }
+      const preferredSlots = itemId === "wheat_seed" ||
+        itemId === "carrot_seed" || itemId === "fertilizer" || itemId === "wood"
+        ? hotbarSlots
+        : inventorySlots;
+      const emptyIndex = preferredSlots.indexOf(null);
+      if (emptyIndex >= 0) preferredSlots[emptyIndex] = itemId;
+    }
+
+    let draggedSlot = null;
+    function bindInventoryDrag() {
+      document.querySelectorAll("#inventory-view .inventory-slot").forEach(slot => {
+        slot.addEventListener("dragstart", event => {
+          if (slot.getAttribute("draggable") !== "true") {
+            event.preventDefault();
+            return;
+          }
+          draggedSlot = { type: slot.dataset.slotType, index: Number(slot.dataset.slotIndex) };
+          slot.classList.add("dragging");
+          if (event.dataTransfer) {
+            event.dataTransfer.effectAllowed = "move";
+            event.dataTransfer.setData("text/plain", "inventory-item");
+          }
+        });
+        slot.addEventListener("dragend", () => {
+          slot.classList.remove("dragging");
+          draggedSlot = null;
+        });
+        slot.addEventListener("dragover", event => event.preventDefault());
+        slot.addEventListener("drop", event => {
+          event.preventDefault();
+          if (!draggedSlot) return;
+          const target = { type: slot.dataset.slotType, index: Number(slot.dataset.slotIndex) };
+          const sourceSlots = draggedSlot.type === "hotbar" ? hotbarSlots : inventorySlots;
+          const targetSlots = target.type === "hotbar" ? hotbarSlots : inventorySlots;
+          const sourceItem = sourceSlots[draggedSlot.index];
+          if (!sourceItem) return;
+          const targetItem = targetSlots[target.index];
+          targetSlots[target.index] = sourceItem;
+          sourceSlots[draggedSlot.index] = targetItem || null;
+          if (target.type === "hotbar") selectedHotbarIndex = target.index;
+          updateInventory();
+          sendSelectedHotbarItem();
+        });
+      });
+    }
+
+    function sendSelectedHotbarItem() {
+      const itemId = hotbarSlots[selectedHotbarIndex];
+      if (unityInstance && itemId) {
+        unityInstance.SendMessage("Prototype Bootstrap", "SelectHotbarItem", itemId);
+      }
     }
 
     function openUtility(mode) {
@@ -1239,7 +1343,7 @@
 
     // 每次发布都更换版本号，避免 UnityCache/浏览器继续使用旧的同名构建文件。
     const buildUrl = "Build";
-    const buildVersion = "20260724-farm5";
+    const buildVersion = "20260724-farm6";
     const assetUrl = file => buildUrl + "/" + file + "?v=" + buildVersion;
     const loaderUrl = assetUrl("docs.loader.js");
     const config = {
@@ -1322,12 +1426,7 @@
       if (/^[1-9]$/.test(key)) {
         selectedHotbarIndex = Number(key) - 1;
         updateInventory();
-        if (unityInstance && hotbarItemIds[selectedHotbarIndex]) {
-          unityInstance.SendMessage(
-            "Prototype Bootstrap",
-            "SelectHotbarItem",
-            hotbarItemIds[selectedHotbarIndex]);
-        }
+        sendSelectedHotbarItem();
       }
       if (event.key === "Escape") {
         event.preventDefault();
