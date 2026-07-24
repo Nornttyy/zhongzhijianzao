@@ -694,6 +694,28 @@
     }
 
     @media (max-width: 600px) {
+      #persistent-hotbar {
+        top: 10px;
+        left: 8px;
+        grid-template-columns: repeat(9, 30px);
+        gap: 2px;
+        padding: 3px;
+      }
+
+      #persistent-hotbar .inventory-slot {
+        width: 30px;
+        min-height: 30px;
+        font-size: 13px;
+      }
+
+      #persistent-hotbar .slot-icon {
+        font-size: 18px;
+      }
+
+      #persistent-hotbar .slot-count {
+        font-size: 10px;
+      }
+
       #utility-panel {
         width: calc(100vw - 20px);
         min-height: 0;
@@ -942,7 +964,7 @@
 
     // 每次发布都更换版本号，避免 UnityCache/浏览器继续使用旧的同名构建文件。
     const buildUrl = "Build";
-    const buildVersion = "20260724-shop1";
+    const buildVersion = "20260724-shop2";
     const assetUrl = file => buildUrl + "/" + file + "?v=" + buildVersion;
     const loaderUrl = assetUrl("docs.loader.js");
     const config = {
