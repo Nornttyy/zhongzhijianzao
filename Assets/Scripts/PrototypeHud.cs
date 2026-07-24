@@ -85,7 +85,7 @@ namespace DoNotOpen.Prototype
             }
 
             GUI.Label(new Rect(32f, 27f, 212f, 25f), "种植建造", titleStyle);
-            GUI.Label(new Rect(32f, 55f, 340f, 20f), "WASD 移动 · E 背包 · I 商店 · 右键互动/建造", bodyStyle);
+            GUI.Label(new Rect(32f, 55f, 340f, 20f), "WASD 移动 · E 背包 · I 商店 · 右键互动", bodyStyle);
 
             const float coinPanelWidth = 160f;
             Rect coinPanel = new Rect(Screen.width - coinPanelWidth - 18f, 18f, coinPanelWidth, 38f);
@@ -240,7 +240,7 @@ namespace DoNotOpen.Prototype
 
             GUI.Label(
                 new Rect(card.x + 20f, card.y + 270f, card.width - 40f, 28f),
-                "WASD 移动 · E 背包 · I 商店 · 右键互动/建造",
+                "WASD 移动 · E 背包 · I 商店 · 右键互动",
                 menuControlsStyle);
             GUI.color = Color.white;
         }
