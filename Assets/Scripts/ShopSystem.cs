@@ -29,12 +29,17 @@ namespace DoNotOpen.Prototype
         public void Initialize(TopDownPlayer controlledPlayer)
         {
             player = controlledPlayer;
-            itemCounts["wheat_seed"] = 0;
+            itemCounts["wheat_seed"] = 10;
             itemCounts["carrot_seed"] = 0;
             itemCounts["fertilizer"] = 0;
             itemCounts["wood"] = 0;
+            itemCounts["hoe"] = 1;
             itemCounts["wheat_crop"] = 0;
             itemCounts["carrot_crop"] = 0;
+#if UNITY_WEBGL && !UNITY_EDITOR
+            NotifyShopItem("wheat_seed", 10);
+            NotifyShopItem("hoe", 1);
+#endif
         }
 
         // Called by the HTML shop through Unity's SendMessage API.
