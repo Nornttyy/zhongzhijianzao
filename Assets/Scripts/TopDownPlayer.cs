@@ -15,6 +15,7 @@ namespace DoNotOpen.Prototype
         public SpriteRenderer PlayerSprite { get; private set; }
         public Vector2 Facing { get; private set; } = Vector2.down;
         public ProceduralWorld World { get; set; }
+        public BuildingSystem Buildings { get; set; }
         public bool IsSwimming { get; private set; }
         public int Coins { get; private set; } = StartingCoins;
 
@@ -289,13 +290,15 @@ namespace DoNotOpen.Prototype
                     ? Vector2.zero
                     : collisionShape.offset;
                 Vector2 horizontal = new Vector2(next.x, body.position.y);
-                if (World.CanStandAt(horizontal + collisionOffset, collisionRadius))
+                if (World.CanStandAt(horizontal + collisionOffset, collisionRadius) &&
+                    (Buildings == null || Buildings.CanStandAt(horizontal + collisionOffset, collisionRadius)))
                 {
                     body.position = horizontal;
                 }
 
                 Vector2 vertical = new Vector2(body.position.x, next.y);
-                if (World.CanStandAt(vertical + collisionOffset, collisionRadius))
+                if (World.CanStandAt(vertical + collisionOffset, collisionRadius) &&
+                    (Buildings == null || Buildings.CanStandAt(vertical + collisionOffset, collisionRadius)))
                 {
                     body.position = vertical;
                 }
