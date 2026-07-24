@@ -20,6 +20,9 @@ namespace DoNotOpen.Prototype
 #if UNITY_WEBGL && !UNITY_EDITOR
         [DllImport("__Internal")]
         private static extern void NotifyShopItem(string itemId, int count);
+
+        [DllImport("__Internal", EntryPoint = "NotifyHarvest")]
+        private static extern void NotifyHarvestNative(string itemId, int coins);
 #endif
 
         public void Initialize(TopDownPlayer controlledPlayer)
@@ -46,6 +49,42 @@ namespace DoNotOpen.Prototype
             NotifyShopItem(itemId, count);
 #endif
         }
+
+        public bool TryConsumeItem(string itemId)
+        {
+            int count = GetCount(itemId);
+            if (count <= 0)
+            {
+                return false;
+            }
+
+            itemCounts[itemId] = count - 1;
+#if UNITY_WEBGL && !UNITY_EDITOR
+            NotifyShopItem(itemId, count - 1);
+#endif
+            return true;
+        }
+
+        public void ShowFarmingFeedback(string message)
+        {
+#if UNITY_WEBGL && !UNITY_EDITOR
+            NotifyFarmingFeedback(message);
+#else
+            Debug.Log(message);
+#endif
+        }
+
+        public void NotifyHarvest(string itemId, int coins)
+        {
+#if UNITY_WEBGL && !UNITY_EDITOR
+            NotifyHarvestNative(itemId, coins);
+#endif
+        }
+
+#if UNITY_WEBGL && !UNITY_EDITOR
+        [DllImport("__Internal")]
+        private static extern void NotifyFarmingFeedback(string message);
+#endif
 
         private int GetCount(string itemId)
         {
