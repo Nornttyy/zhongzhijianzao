@@ -17,6 +17,7 @@ namespace DoNotOpen.Prototype
         public ProceduralWorld World { get; set; }
         public BuildingSystem Buildings { get; set; }
         public bool IsSwimming { get; private set; }
+        public bool IsInputLocked { get { return inputLocked; } }
         public int Coins { get; private set; } = StartingCoins;
 
         private bool inputLocked;
