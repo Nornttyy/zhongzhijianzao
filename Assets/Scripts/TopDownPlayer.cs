@@ -19,6 +19,18 @@ namespace DoNotOpen.Prototype
         public bool IsSwimming { get; private set; }
         public int Coins { get; private set; } = StartingCoins;
 
+        private bool inputLocked;
+
+        public void SetInputLocked(string locked)
+        {
+            inputLocked = string.Equals(locked, "true", System.StringComparison.OrdinalIgnoreCase);
+            movement = Vector2.zero;
+            if (body != null)
+            {
+                body.linearVelocity = Vector2.zero;
+            }
+        }
+
         public void AddCoins(int amount)
         {
             if (amount <= 0)
@@ -73,6 +85,13 @@ namespace DoNotOpen.Prototype
 
         private void Update()
         {
+            if (inputLocked)
+            {
+                movement = Vector2.zero;
+                UpdateBounce();
+                return;
+            }
+
             movement = new Vector2(Input.GetAxisRaw("Horizontal"), Input.GetAxisRaw("Vertical"));
             movement = Vector2.ClampMagnitude(movement, 1f);
 
@@ -279,6 +298,12 @@ namespace DoNotOpen.Prototype
 
         private void FixedUpdate()
         {
+            if (inputLocked)
+            {
+                body.linearVelocity = Vector2.zero;
+                return;
+            }
+
             float movementSpeed = IsSwimming ? Speed * SwimSpeedMultiplier : Speed;
             Vector2 next = body.position + movement * (movementSpeed * Time.fixedDeltaTime);
             if (World != null)
