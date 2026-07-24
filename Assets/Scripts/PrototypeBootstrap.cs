@@ -45,6 +45,9 @@ namespace DoNotOpen.Prototype
             buildings.Initialize(player, world);
             player.Buildings = buildings;
 
+            ShopSystem shop = gameObject.AddComponent<ShopSystem>();
+            shop.Initialize(player);
+
             CameraFollow follow = camera.gameObject.AddComponent<CameraFollow>();
             follow.Initialize(player.transform, world.MapBounds);
 
