@@ -1165,6 +1165,7 @@
       carrot_seed: 0,
       fertilizer: 0,
       wood: 0,
+      hoe: 0,
       wheat_crop: 0,
       carrot_crop: 0
     };
@@ -1237,6 +1238,7 @@
         carrot_seed: "sprite-r0-c1",
         fertilizer: "sprite-r0-c2",
         wood: "sprite-r0-c3",
+        hoe: "sprite-r0-c5",
         wheat_crop: "sprite-r2-c0",
         carrot_crop: "sprite-r2-c1"
       };
@@ -1256,26 +1258,36 @@
         if (inventoryIndex >= 0) inventorySlots[inventoryIndex] = null;
         return;
       }
-      if (hotbarIndex >= 0 || inventoryIndex >= 0) return;
+
+      if (hotbarIndex >= 0 || inventoryIndex >= 0) {
+        return;
+      }
 
       const hotbarEmptyIndex = hotbarSlots.indexOf(null);
       if (hotbarEmptyIndex >= 0) {
         hotbarSlots[hotbarEmptyIndex] = itemId;
         return;
       }
+
       const inventoryEmptyIndex = inventorySlots.indexOf(null);
-      if (inventoryEmptyIndex >= 0) inventorySlots[inventoryEmptyIndex] = itemId;
+      if (inventoryEmptyIndex >= 0) {
+        inventorySlots[inventoryEmptyIndex] = itemId;
+      }
     }
 
     let draggedSlot = null;
+
     function bindInventoryDrag() {
       document.querySelectorAll("#inventory-view .inventory-slot").forEach(slot => {
         slot.addEventListener("dragstart", event => {
-          if (slot.getAttribute("draggable") !== "true") {
+          if (slot.dataset.draggable !== "true" && slot.getAttribute("draggable") !== "true") {
             event.preventDefault();
             return;
           }
-          draggedSlot = { type: slot.dataset.slotType, index: Number(slot.dataset.slotIndex) };
+          draggedSlot = {
+            type: slot.dataset.slotType,
+            index: Number(slot.dataset.slotIndex)
+          };
           slot.classList.add("dragging");
           if (event.dataTransfer) {
             event.dataTransfer.effectAllowed = "move";
@@ -1290,7 +1302,10 @@
         slot.addEventListener("drop", event => {
           event.preventDefault();
           if (!draggedSlot) return;
-          const target = { type: slot.dataset.slotType, index: Number(slot.dataset.slotIndex) };
+          const target = {
+            type: slot.dataset.slotType,
+            index: Number(slot.dataset.slotIndex)
+          };
           const sourceSlots = draggedSlot.type === "hotbar" ? hotbarSlots : inventorySlots;
           const targetSlots = target.type === "hotbar" ? hotbarSlots : inventorySlots;
           const sourceItem = sourceSlots[draggedSlot.index];
@@ -1298,7 +1313,9 @@
           const targetItem = targetSlots[target.index];
           targetSlots[target.index] = sourceItem;
           sourceSlots[draggedSlot.index] = targetItem || null;
-          if (target.type === "hotbar") selectedHotbarIndex = target.index;
+          if (target.type === "hotbar") {
+            selectedHotbarIndex = target.index;
+          }
           updateInventory();
           sendSelectedHotbarItem();
         });
@@ -1407,7 +1424,7 @@
 
     // 每次发布都更换版本号，避免 UnityCache/浏览器继续使用旧的同名构建文件。
     const buildUrl = "Build";
-    const buildVersion = "20260724-farm8";
+    const buildVersion = "20260724-farm9";
     const assetUrl = file => buildUrl + "/" + file + "?v=" + buildVersion;
     const loaderUrl = assetUrl("docs.loader.js");
     const config = {
