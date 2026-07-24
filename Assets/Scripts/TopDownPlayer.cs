@@ -42,7 +42,6 @@ namespace DoNotOpen.Prototype
         private Rigidbody2D body;
         private CircleCollider2D collisionShape;
         private Vector2 movement;
-        private Vector2 spawnPosition;
         private Vector3 visualOrigin;
         private Vector3 visualScale = Vector3.one;
         private float bouncePhase;
@@ -69,7 +68,6 @@ namespace DoNotOpen.Prototype
         {
             body = GetComponent<Rigidbody2D>();
             collisionShape = GetComponent<CircleCollider2D>();
-            spawnPosition = transform.position;
         }
 
         private void Update()
@@ -101,18 +99,6 @@ namespace DoNotOpen.Prototype
 
             UpdateBounce();
             UpdateWaterSplash();
-
-            if (Input.GetKeyDown(KeyCode.R))
-            {
-                if (World != null && World.IsInCave)
-                {
-                    World.ExitCave();
-                }
-                else
-                {
-                    Teleport(spawnPosition);
-                }
-            }
         }
 
         public void Teleport(Vector2 position)
