@@ -41,6 +41,10 @@ namespace DoNotOpen.Prototype
             world.Initialize(worldTexture, caveEntranceTexture, player);
             player.World = world;
 
+            BuildingSystem buildings = gameObject.AddComponent<BuildingSystem>();
+            buildings.Initialize(player, world);
+            player.Buildings = buildings;
+
             CameraFollow follow = camera.gameObject.AddComponent<CameraFollow>();
             follow.Initialize(player.transform, world.MapBounds);
 
