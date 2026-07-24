@@ -4,10 +4,9 @@ using UnityEngine;
 namespace DoNotOpen.Prototype
 {
     /// <summary>
-    /// The first playable farming loop: buy a seed, plant it on the starter
-    /// field, wait for the three pixel-art growth stages, then harvest it for
-    /// coins. The field itself is part of the procedural world; crops are
-    /// lightweight overlays so they do not alter the terrain mesh.
+    /// The first playable farming loop: use the hoe to till grass, plant a
+    /// seed, wait for the three pixel-art growth stages, then harvest it.
+    /// Crops are lightweight overlays so they do not alter the terrain mesh.
     /// </summary>
     public sealed class FarmingSystem : MonoBehaviour
     {
@@ -23,7 +22,7 @@ namespace DoNotOpen.Prototype
         private ShopSystem shop;
         private Sprite[] wheatStages;
         private Sprite[] carrotStages;
-        private string selectedSeed = "wheat_seed";
+        private string selectedItemId = "wheat_seed";
 
         public void Initialize(
             TopDownPlayer controlledPlayer,
@@ -46,9 +45,9 @@ namespace DoNotOpen.Prototype
         // Called from the web hotbar when the player presses 1–9.
         public void SelectHotbarItem(string itemId)
         {
-            if (itemId == "wheat_seed" || itemId == "carrot_seed")
+            if (itemId == "wheat_seed" || itemId == "carrot_seed" || itemId == "hoe")
             {
-                selectedSeed = itemId;
+                selectedItemId = itemId;
             }
         }
 
@@ -78,7 +77,22 @@ namespace DoNotOpen.Prototype
             Vector2 clickPosition = viewCamera.ScreenToWorldPoint(Input.mousePosition);
             Vector2Int tile = world.WorldToTile(clickPosition);
             Vector2 tilePosition = new Vector2(tile.x, tile.y);
-            if (Vector2.Distance(player.transform.position, tilePosition) > InteractionDistance ||
+            if (Vector2.Distance(player.transform.position, tilePosition) > InteractionDistance)
+            {
+                return;
+            }
+
+            if (selectedItemId == "hoe")
+            {
+                if (world.TryTillAt(tile))
+                {
+                    shop.ShowFarmingFeedback("耕地已开垦，可以播种了");
+                }
+
+                return;
+            }
+
+            if ((selectedItemId != "wheat_seed" && selectedItemId != "carrot_seed") ||
                 !world.IsFarmlandAt(tile))
             {
                 return;
@@ -94,20 +108,20 @@ namespace DoNotOpen.Prototype
                 return;
             }
 
-            if (!shop.TryConsumeItem(selectedSeed))
+            if (!shop.TryConsumeItem(selectedItemId))
             {
                 shop.ShowFarmingFeedback("先去商店购买种子");
                 return;
             }
 
-            Sprite[] stages = selectedSeed == "carrot_seed" ? carrotStages : wheatStages;
+            Sprite[] stages = selectedItemId == "carrot_seed" ? carrotStages : wheatStages;
             if (stages == null || stages.Length == 0)
             {
                 return;
             }
 
             GameObject cropObject = new GameObject(
-                (selectedSeed == "carrot_seed" ? "Carrot" : "Wheat") + " Crop " + tile);
+                (selectedItemId == "carrot_seed" ? "Carrot" : "Wheat") + " Crop " + tile);
             cropObject.transform.SetParent(transform, false);
             // The crop sprites are rooted at their bottom edge, so place that
             // edge on the bottom of the 1×1 farmland tile.
@@ -118,12 +132,12 @@ namespace DoNotOpen.Prototype
 
             plots[tile] = new CropPlot
             {
-                SeedId = selectedSeed,
+                SeedId = selectedItemId,
                 PlantedAt = Time.time,
                 Stage = 0,
                 Renderer = renderer
             };
-            shop.ShowFarmingFeedback(selectedSeed == "carrot_seed" ? "胡萝卜已播种" : "小麦已播种");
+            shop.ShowFarmingFeedback(selectedItemId == "carrot_seed" ? "胡萝卜已播种" : "小麦已播种");
         }
 
         private void UpdateGrowth()
