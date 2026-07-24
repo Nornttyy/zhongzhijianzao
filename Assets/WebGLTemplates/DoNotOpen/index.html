@@ -594,21 +594,21 @@
       font-size: 0;
     }
 
-    .sprite-r0-c0 { background-position: 0% 0%; }
-    .sprite-r0-c1 { background-position: 14.2857% 0%; }
-    .sprite-r0-c2 { background-position: 28.5714% 0%; }
-    .sprite-r0-c3 { background-position: 42.8571% 0%; }
-    .sprite-r0-c4 { background-position: 57.1429% 0%; }
-    .sprite-r0-c5 { background-position: 71.4286% 0%; }
-    .sprite-r0-c6 { background-position: 85.7143% 0%; }
-    .sprite-r1-c0 { background-position: 0% 33.3333%; }
-    .sprite-r1-c1 { background-position: 14.2857% 33.3333%; }
-    .sprite-r1-c2 { background-position: 28.5714% 33.3333%; }
-    .sprite-r1-c3 { background-position: 42.8571% 33.3333%; }
-    .sprite-r1-c4 { background-position: 57.1429% 33.3333%; }
-    .sprite-r1-c5 { background-position: 71.4286% 33.3333%; }
-    .sprite-r2-c0 { background-position: 0% 66.6667%; }
-    .sprite-r2-c1 { background-position: 14.2857% 66.6667%; }
+    .sprite-r0-c0 { background-position: 0% 0% !important; }
+    .sprite-r0-c1 { background-position: 14.2857% 0% !important; }
+    .sprite-r0-c2 { background-position: 28.5714% 0% !important; }
+    .sprite-r0-c3 { background-position: 42.8571% 0% !important; }
+    .sprite-r0-c4 { background-position: 57.1429% 0% !important; }
+    .sprite-r0-c5 { background-position: 71.4286% 0% !important; }
+    .sprite-r0-c6 { background-position: 85.7143% 0% !important; }
+    .sprite-r1-c0 { background-position: 0% 33.3333% !important; }
+    .sprite-r1-c1 { background-position: 14.2857% 33.3333% !important; }
+    .sprite-r1-c2 { background-position: 28.5714% 33.3333% !important; }
+    .sprite-r1-c3 { background-position: 42.8571% 33.3333% !important; }
+    .sprite-r1-c4 { background-position: 57.1429% 33.3333% !important; }
+    .sprite-r1-c5 { background-position: 71.4286% 33.3333% !important; }
+    .sprite-r2-c0 { background-position: 0% 66.6667% !important; }
+    .sprite-r2-c1 { background-position: 14.2857% 66.6667% !important; }
 
     .slot-count {
       position: absolute;
@@ -989,7 +989,7 @@
 
     // 每次发布都更换版本号，避免 UnityCache/浏览器继续使用旧的同名构建文件。
     const buildUrl = "Build";
-    const buildVersion = "20260724-shop3";
+    const buildVersion = "20260724-shop4";
     const assetUrl = file => buildUrl + "/" + file + "?v=" + buildVersion;
     const loaderUrl = assetUrl("{{{ LOADER_FILENAME }}}");
     const config = {
