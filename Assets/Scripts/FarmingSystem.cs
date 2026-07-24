@@ -155,15 +155,13 @@ namespace DoNotOpen.Prototype
 
         private void Harvest(Vector2Int tile, CropPlot plot)
         {
-            int reward = plot.SeedId == "carrot_seed" ? 16 : 10;
-            player.AddCoins(reward);
             if (plot.Renderer != null)
             {
                 Destroy(plot.Renderer.gameObject);
             }
 
             plots.Remove(tile);
-            shop.NotifyHarvest(plot.SeedId, reward);
+            shop.AddHarvest(plot.SeedId);
         }
 
         private static Sprite[] CreateSprites(
