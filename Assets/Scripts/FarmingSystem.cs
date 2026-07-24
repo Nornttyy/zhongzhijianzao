@@ -109,7 +109,9 @@ namespace DoNotOpen.Prototype
             GameObject cropObject = new GameObject(
                 (selectedSeed == "carrot_seed" ? "Carrot" : "Wheat") + " Crop " + tile);
             cropObject.transform.SetParent(transform, false);
-            cropObject.transform.position = new Vector3(tile.x, tile.y, 0f);
+            // The crop sprites are rooted at their bottom edge, so place that
+            // edge on the bottom of the 1×1 farmland tile.
+            cropObject.transform.position = new Vector3(tile.x, tile.y - 0.5f, 0f);
             SpriteRenderer renderer = cropObject.AddComponent<SpriteRenderer>();
             renderer.sprite = stages[0];
             renderer.sortingOrder = ProceduralWorld.GetSurfaceSortingOrder(tile.y) - 10;
