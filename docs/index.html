@@ -470,6 +470,59 @@
       display: block;
     }
 
+    #utility-panel {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      z-index: 10;
+      display: none;
+      width: min(420px, 86vw);
+      transform: translate(-50%, -50%);
+      border: 3px solid var(--line);
+      padding: 22px;
+      background: rgba(27, 43, 29, 0.97);
+      color: var(--muted);
+      text-align: center;
+    }
+
+    #utility-panel.visible {
+      display: block;
+    }
+
+    #utility-title {
+      margin-bottom: 14px;
+      color: var(--ink);
+      font-size: 25px;
+    }
+
+    #inventory-view,
+    #shop-view {
+      font-size: 15px;
+      line-height: 1.9;
+    }
+
+    #shop-view {
+      display: none;
+    }
+
+    #shop-view.visible {
+      display: grid;
+      gap: 8px;
+    }
+
+    .shop-button {
+      border: 2px solid #19351f;
+      padding: 9px 12px 7px;
+      background: var(--accent);
+      color: #20321f;
+      font: inherit;
+      cursor: pointer;
+    }
+
+    .shop-button:hover {
+      background: #ffe994;
+    }
+
     #banner {
       position: absolute;
       top: 14px;
@@ -538,6 +591,15 @@
     <div id="coin-display" aria-live="polite">金币: 100</div>
     <div id="hotkey-hud">E 背包 · I 商店 · 右键 互动/建造</div>
     <div id="hotkey-feedback" aria-live="polite"></div>
+    <section id="utility-panel" aria-label="背包和商店">
+      <div id="utility-title">背包</div>
+      <div id="inventory-view"></div>
+      <div id="shop-view">
+        <button class="shop-button" data-building="training_camp" data-price="80" data-label="训兵营">训兵营 · 80 金币</button>
+        <button class="shop-button" data-building="wall" data-price="10" data-label="城墙">城墙 · 10 金币</button>
+        <button class="shop-button" data-building="gate" data-price="25" data-label="城门">城门 · 25 金币</button>
+      </div>
+    </section>
     <div id="banner" role="alert"></div>
   </main>
 
@@ -553,6 +615,16 @@
     const coinDisplay = document.querySelector("#coin-display");
     const hotkeyHud = document.querySelector("#hotkey-hud");
     const hotkeyFeedback = document.querySelector("#hotkey-feedback");
+    const utilityPanel = document.querySelector("#utility-panel");
+    const utilityTitle = document.querySelector("#utility-title");
+    const inventoryView = document.querySelector("#inventory-view");
+    const shopView = document.querySelector("#shop-view");
+    let coinAmount = 100;
+    const ownedBuildings = {
+      training_camp: 0,
+      wall: 0,
+      gate: 0
+    };
     let hotkeyFeedbackTimer;
 
     function showHotkeyFeedback(message) {
@@ -564,13 +636,60 @@
 
     window.setCoinDisplay = value => {
       const amount = Number(value);
-      coinDisplay.textContent = "金币: " + (Number.isFinite(amount) ? amount.toLocaleString("zh-CN") : "0");
+      coinAmount = Number.isFinite(amount) ? amount : 0;
+      coinDisplay.textContent = "金币: " + coinAmount.toLocaleString("zh-CN");
       coinDisplay.classList.add("visible");
+      updateInventory();
     };
+
+    function updateInventory() {
+      inventoryView.innerHTML = "金币：" + coinAmount.toLocaleString("zh-CN") +
+        "<br>训兵营：" + ownedBuildings.training_camp +
+        "　城墙：" + ownedBuildings.wall +
+        "　城门：" + ownedBuildings.gate +
+        "<br><small>购买建筑后按右键放置</small>";
+    }
+
+    function openUtility(mode) {
+      utilityPanel.classList.add("visible");
+      const isShop = mode === "shop";
+      utilityTitle.textContent = isShop ? "商店" : "背包";
+      inventoryView.style.display = isShop ? "none" : "block";
+      shopView.classList.toggle("visible", isShop);
+      updateInventory();
+    }
+
+    function closeUtility() {
+      utilityPanel.classList.remove("visible");
+    }
+
+    document.querySelectorAll("[data-building]").forEach(button => {
+      button.addEventListener("click", () => {
+        if (!unityInstance) {
+          showHotkeyFeedback("世界还在载入");
+          return;
+        }
+
+        const id = button.dataset.building;
+        const price = Number(button.dataset.price);
+        const label = button.dataset.label;
+        if (coinAmount < price) {
+          showHotkeyFeedback("金币不足");
+          return;
+        }
+
+        coinAmount -= price;
+        ownedBuildings[id] += 1;
+        window.setCoinDisplay(coinAmount);
+        unityInstance.SendMessage("Cozy Farm Bootstrap", "BuyBuilding", id);
+        showHotkeyFeedback("已购买" + label + "，请右键放置");
+        openUtility("shop");
+      });
+    });
 
     // 每次发布都更换版本号，避免 UnityCache/浏览器继续使用旧的同名构建文件。
     const buildUrl = "Build";
-    const buildVersion = "20260724-hotkeys3";
+    const buildVersion = "20260724-hotkeys4";
     const assetUrl = file => buildUrl + "/" + file + "?v=" + buildVersion;
     const loaderUrl = assetUrl("docs.loader.js");
     const config = {
@@ -633,8 +752,9 @@
     document.addEventListener("keydown", event => {
       if (!menu.classList.contains("hidden")) return;
       const key = event.key.toLowerCase();
-      if (key === "e") showHotkeyFeedback("E：背包");
-      if (key === "i") showHotkeyFeedback("I：商店");
+      if (key === "e") openUtility("inventory");
+      if (key === "i") openUtility("shop");
+      if (event.key === "Escape") closeUtility();
     });
 
     canvas.addEventListener("pointerdown", () => canvas.focus());
