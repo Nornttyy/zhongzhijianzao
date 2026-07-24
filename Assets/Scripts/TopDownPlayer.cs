@@ -7,7 +7,7 @@ namespace DoNotOpen.Prototype
     {
         private const float MovementRadius = 0.2f;
         private const float BoundaryMargin = 0.22f;
-        private const int StartingCoins = 100;
+        private const int StartingCoins = 0;
 
         public float Speed { get; set; } = 3.6f;
         public float SwimSpeedMultiplier { get; set; } = 0.45f;
