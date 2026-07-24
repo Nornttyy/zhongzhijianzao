@@ -81,6 +81,14 @@ namespace DoNotOpen.Prototype
             }
         }
 
+        public void SellItem(string itemId)
+        {
+            if (shop != null)
+            {
+                shop.SellItem(itemId);
+            }
+        }
+
         private static Camera BuildCamera()
         {
             Camera camera = Camera.main;
