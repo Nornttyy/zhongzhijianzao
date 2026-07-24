@@ -11,10 +11,6 @@ namespace DoNotOpen.Prototype
 
         private const int LoadRadius = 1;
         private const int AtlasCellSize = 12;
-        // A small starter field is kept close to the spawn point so the first
-        // farming loop is immediately playable instead of requiring a long
-        // search through the procedural world.
-        private static readonly RectInt StarterFarmBounds = new RectInt(-5, -4, 6, 4);
         private const float WaterFrameDuration = 0.55f;
         private const float DecorationChance = 0.11f;
         private const int SwimBodySampleColumns = 6;
@@ -57,6 +53,8 @@ namespace DoNotOpen.Prototype
 
         private readonly Dictionary<Vector2Int, GeneratedWorldChunk> loadedChunks =
             new Dictionary<Vector2Int, GeneratedWorldChunk>();
+
+        private readonly HashSet<Vector2Int> tilledTiles = new HashSet<Vector2Int>();
 
         private readonly List<Vector2Int> removalBuffer = new List<Vector2Int>();
         private readonly List<CaveEntranceMarker> loadedCaveEntrances =
@@ -190,8 +188,30 @@ namespace DoNotOpen.Prototype
 
         public bool IsFarmlandAt(Vector2Int tile)
         {
-            return StarterFarmBounds.Contains(tile) &&
+            return tilledTiles.Contains(tile) &&
                    GetGround(tile.x, tile.y) == GroundType.Farmland;
+        }
+
+        public bool TryTillAt(Vector2Int tile)
+        {
+            if (!IsInsideWorld(tile.x, tile.y) ||
+                GetGround(tile.x, tile.y) != GroundType.Grass)
+            {
+                return false;
+            }
+
+            tilledTiles.Add(tile);
+            Vector2Int chunkCoordinate = new Vector2Int(
+                Mathf.FloorToInt(tile.x / (float)ChunkSize),
+                Mathf.FloorToInt(tile.y / (float)ChunkSize));
+            if (loadedChunks.TryGetValue(chunkCoordinate, out GeneratedWorldChunk chunk) &&
+                chunk != null &&
+                chunk.Mesh != null)
+            {
+                chunk.Mesh.uv = BuildChunkUvs(chunkCoordinate);
+            }
+
+            return true;
         }
 
         public bool ShouldSwimAt(Vector2 position)
@@ -248,7 +268,7 @@ namespace DoNotOpen.Prototype
 
         public GroundType GetGround(int worldX, int worldY)
         {
-            if (StarterFarmBounds.Contains(new Vector2Int(worldX, worldY)))
+            if (tilledTiles.Contains(new Vector2Int(worldX, worldY)))
             {
                 return GroundType.Farmland;
             }
