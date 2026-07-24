@@ -465,6 +465,10 @@
       background-size: 800% 400%;
     }
 
+    #coin-display > .coin-sprite {
+      transform: translateY(2px);
+    }
+
     .coin-label,
     .coin-separator {
       line-height: 34px;
@@ -1049,7 +1053,7 @@
 
     // 每次发布都更换版本号，避免 UnityCache/浏览器继续使用旧的同名构建文件。
     const buildUrl = "Build";
-    const buildVersion = "20260724-shop8";
+    const buildVersion = "20260724-shop9";
     const assetUrl = file => buildUrl + "/" + file + "?v=" + buildVersion;
     const loaderUrl = assetUrl("{{{ LOADER_FILENAME }}}");
     const config = {
