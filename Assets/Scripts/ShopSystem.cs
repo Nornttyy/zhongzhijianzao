@@ -7,8 +7,9 @@ using System.Runtime.InteropServices;
 namespace DoNotOpen.Prototype
 {
     /// <summary>
-    /// Handles purchases made from the web shop. The wallet remains owned by
-    /// TopDownPlayer; this component only validates prices and stores items.
+    /// Handles purchases and crop sales made from the web shop. The wallet
+    /// remains owned by TopDownPlayer; this component validates prices and
+    /// stores both supplies and harvested crops.
     /// </summary>
     public sealed class ShopSystem : MonoBehaviour
     {
@@ -32,6 +33,8 @@ namespace DoNotOpen.Prototype
             itemCounts["carrot_seed"] = 0;
             itemCounts["fertilizer"] = 0;
             itemCounts["wood"] = 0;
+            itemCounts["wheat_crop"] = 0;
+            itemCounts["carrot_crop"] = 0;
         }
 
         // Called by the HTML shop through Unity's SendMessage API.
@@ -63,6 +66,33 @@ namespace DoNotOpen.Prototype
             NotifyShopItem(itemId, count - 1);
 #endif
             return true;
+        }
+
+        public void AddHarvest(string seedId)
+        {
+            string harvestId = seedId == "carrot_seed" ? "carrot_crop" : "wheat_crop";
+            int count = GetCount(harvestId) + 1;
+            itemCounts[harvestId] = count;
+#if UNITY_WEBGL && !UNITY_EDITOR
+            NotifyShopItem(harvestId, count);
+            NotifyHarvestNative(harvestId, count);
+#endif
+        }
+
+        // Called by the web shop through Unity's SendMessage API.
+        public void SellItem(string itemId)
+        {
+            int price = GetSellPrice(itemId);
+            if (price <= 0 || player == null || !TryConsumeItem(itemId))
+            {
+                return;
+            }
+
+            player.AddCoins(price);
+            ShowFarmingFeedback(
+                itemId == "carrot_crop"
+                    ? "胡萝卜已售出，获得 " + price + " 金币"
+                    : "小麦已售出，获得 " + price + " 金币");
         }
 
         public void ShowFarmingFeedback(string message)
@@ -103,6 +133,19 @@ namespace DoNotOpen.Prototype
                     return 12;
                 case "wood":
                     return 15;
+                default:
+                    return 0;
+            }
+        }
+
+        private static int GetSellPrice(string itemId)
+        {
+            switch (itemId)
+            {
+                case "wheat_crop":
+                    return 10;
+                case "carrot_crop":
+                    return 16;
                 default:
                     return 0;
             }
