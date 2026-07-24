@@ -11,6 +11,10 @@ namespace DoNotOpen.Prototype
 
         private const int LoadRadius = 1;
         private const int AtlasCellSize = 12;
+        // A small starter field is kept close to the spawn point so the first
+        // farming loop is immediately playable instead of requiring a long
+        // search through the procedural world.
+        private static readonly RectInt StarterFarmBounds = new RectInt(-5, -4, 6, 4);
         private const float WaterFrameDuration = 0.55f;
         private const float DecorationChance = 0.11f;
         private const int SwimBodySampleColumns = 6;
@@ -44,7 +48,8 @@ namespace DoNotOpen.Prototype
             Grass,
             Stone,
             Water,
-            Sand
+            Sand,
+            Farmland
         }
 
         public int Seed { get; private set; } = 271828;
@@ -183,6 +188,12 @@ namespace DoNotOpen.Prototype
             return GetGround(tile.x, tile.y) == GroundType.Water;
         }
 
+        public bool IsFarmlandAt(Vector2Int tile)
+        {
+            return StarterFarmBounds.Contains(tile) &&
+                   GetGround(tile.x, tile.y) == GroundType.Farmland;
+        }
+
         public bool ShouldSwimAt(Vector2 position)
         {
             if (IsInCave)
@@ -237,6 +248,11 @@ namespace DoNotOpen.Prototype
 
         public GroundType GetGround(int worldX, int worldY)
         {
+            if (StarterFarmBounds.Contains(new Vector2Int(worldX, worldY)))
+            {
+                return GroundType.Farmland;
+            }
+
             // 出生点附近保持为草地，方便玩家一开始活动。
             if (Mathf.Abs(worldX) <= 7 && Mathf.Abs(worldY) <= 7)
             {
@@ -445,6 +461,9 @@ namespace DoNotOpen.Prototype
                         : new Vector2Int(6, 0);
                 case GroundType.Sand:
                     return new Vector2Int(0, 2);
+                case GroundType.Farmland:
+                    // 棕色耕地使用素材表第一行的耕地格，不改变草地颜色。
+                    return new Vector2Int(2, 0);
                 default:
                     // 两种草地颜色相同，只用不同斑点位置减少重复感。
                     return Hash01(worldX, worldY, Seed + 919) < 0.5f
