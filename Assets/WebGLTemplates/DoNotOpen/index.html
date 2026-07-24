@@ -568,6 +568,11 @@
       margin: 0 auto;
     }
 
+    #utility-panel.shop-screen #sell-view {
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
     #utility-panel.shop-screen .shop-grid {
       grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 24px;
@@ -602,6 +607,35 @@
       background: #ffe994;
     }
 
+    #sell-toggle {
+      position: absolute;
+      top: calc(50% + 68px);
+      left: 10px;
+      z-index: 7;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      min-width: 78px;
+      min-height: 50px;
+      transform: translateY(-50%);
+      border: 3px solid #19351f;
+      padding: 10px 14px 8px;
+      background: #9ed36a;
+      color: #20321f;
+      font: inherit;
+      font-size: 20px;
+      cursor: pointer;
+      box-shadow: 4px 4px 0 rgba(20, 33, 24, 0.72);
+    }
+
+    #sell-toggle.visible {
+      display: flex;
+    }
+
+    #sell-toggle:hover {
+      background: #c8ed8b;
+    }
+
     #utility-title-row {
       display: flex;
       align-items: center;
@@ -633,7 +667,8 @@
     }
 
     #inventory-view,
-    #shop-view {
+    #shop-view,
+    #sell-view {
       font-size: 18px;
       line-height: 2.1;
     }
@@ -804,6 +839,15 @@
       gap: 8px;
     }
 
+    #sell-view {
+      display: none;
+    }
+
+    #sell-view.visible {
+      display: grid;
+      gap: 8px;
+    }
+
     .shop-button {
       display: flex;
       min-height: 106px;
@@ -882,6 +926,14 @@
       }
 
       #shop-toggle {
+        left: 6px;
+        min-width: 66px;
+        min-height: 44px;
+        padding: 8px 10px 6px;
+        font-size: 17px;
+      }
+
+      #sell-toggle {
         left: 6px;
         min-width: 66px;
         min-height: 44px;
@@ -1032,6 +1084,7 @@
     <div id="coin-display" aria-live="polite"><span class="coin-sprite"></span><span class="coin-separator">:</span><span id="coin-amount">100</span></div>
     <div id="persistent-hotbar" aria-label="快捷栏"></div>
     <button id="shop-toggle" type="button" aria-label="打开商店">商店</button>
+    <button id="sell-toggle" type="button" aria-label="打开出售界面">出售</button>
     <div id="hotkey-hud">E 背包 · 左侧商店 · 右键互动</div>
     <div id="hotkey-feedback" aria-live="polite"></div>
     <section id="utility-panel" aria-label="背包和商店">
@@ -1046,7 +1099,7 @@
         <div class="inventory-tip">按 E 或 Esc 关闭 · 数字键 1–9 选择快捷栏</div>
       </div>
       <div id="shop-view">
-        <div class="shop-intro">购买种子开始种田，收获后再出售农作物换取金币。</div>
+        <div class="shop-intro">购买种子和农场用品。</div>
         <div class="shop-grid">
           <button class="shop-button" data-item="wheat_seed" data-price="5" data-label="小麦种子">
             <span class="shop-icon sprite-r0-c0"></span><span class="shop-copy"><strong>小麦种子</strong><small>种下后可收获小麦 · <span class="price"><span class="coin-sprite coin-small"></span>5</span></small></span>
@@ -1061,6 +1114,9 @@
             <span class="shop-icon sprite-r0-c3"></span><span class="shop-copy"><strong>木材</strong><small>建造系统的基础材料 · <span class="price"><span class="coin-sprite coin-small"></span>15</span></small></span>
           </button>
         </div>
+      </div>
+      <div id="sell-view">
+        <div class="shop-intro">出售背包里的成熟农作物，换取金币。</div>
         <div class="shop-section-title">出售农作物</div>
         <div class="shop-grid">
           <button class="shop-button" data-sell-item="wheat_crop" data-price="10" data-label="小麦">
@@ -1088,6 +1144,7 @@
     const coinAmountLabel = document.querySelector("#coin-amount");
     const persistentHotbar = document.querySelector("#persistent-hotbar");
     const shopToggle = document.querySelector("#shop-toggle");
+    const sellToggle = document.querySelector("#sell-toggle");
     const hotkeyHud = document.querySelector("#hotkey-hud");
     const hotkeyFeedback = document.querySelector("#hotkey-feedback");
     const utilityPanel = document.querySelector("#utility-panel");
@@ -1097,6 +1154,7 @@
     const inventoryGrid = document.querySelector("#inventory-grid");
     const hotbarGrid = document.querySelector("#hotbar-grid");
     const shopView = document.querySelector("#shop-view");
+    const sellView = document.querySelector("#sell-view");
     let utilityMode = null;
     let selectedHotbarIndex = 0;
     let coinAmount = 100;
@@ -1272,13 +1330,16 @@
     function openUtility(mode) {
       utilityMode = mode;
       const isShop = mode === "shop";
-      utilityTitle.textContent = isShop ? "商店" : "背包";
-      inventoryView.style.display = isShop ? "none" : "block";
+      const isSell = mode === "sell";
+      const isFullScreen = isShop || isSell;
+      utilityTitle.textContent = isShop ? "商店" : isSell ? "出售" : "背包";
+      inventoryView.style.display = isFullScreen ? "none" : "block";
       shopView.classList.toggle("visible", isShop);
+      sellView.classList.toggle("visible", isSell);
       updateInventory();
       setGameInputLocked(true);
 
-      if (isShop) {
+      if (isFullScreen) {
         utilityPanel.classList.add("shop-screen");
         utilityPanel.classList.remove("visible");
         requestAnimationFrame(() => utilityPanel.classList.add("visible"));
@@ -1289,10 +1350,10 @@
     }
 
     function closeUtility() {
-      const isShop = utilityPanel.classList.contains("shop-screen");
+      const isFullScreen = utilityPanel.classList.contains("shop-screen");
       utilityPanel.classList.remove("visible");
       utilityMode = null;
-      if (isShop) {
+      if (isFullScreen) {
         window.setTimeout(() => {
           utilityPanel.classList.remove("shop-screen");
           setGameInputLocked(false);
@@ -1315,6 +1376,7 @@
 
     utilityClose.addEventListener("click", closeUtility);
     shopToggle.addEventListener("click", () => openUtility("shop"));
+    sellToggle.addEventListener("click", () => openUtility("sell"));
 
     document.querySelectorAll("[data-item]").forEach(button => {
       button.addEventListener("click", () => {
@@ -1354,13 +1416,13 @@
 
         unityInstance.SendMessage("Prototype Bootstrap", "SellItem", id);
         showHotkeyFeedback("正在出售" + label);
-        openUtility("shop");
+        openUtility("sell");
       });
     });
 
     // 每次发布都更换版本号，避免 UnityCache/浏览器继续使用旧的同名构建文件。
     const buildUrl = "Build";
-    const buildVersion = "20260724-farm7";
+    const buildVersion = "20260724-farm8";
     const assetUrl = file => buildUrl + "/" + file + "?v=" + buildVersion;
     const loaderUrl = assetUrl("{{{ LOADER_FILENAME }}}");
     const config = {
@@ -1404,6 +1466,7 @@
           persistentHotbar.classList.add("visible");
           shopToggle.classList.add("visible");
           hotkeyHud.classList.add("visible");
+          sellToggle.classList.add("visible");
           canvas.focus();
         }).catch(message => {
           banner.textContent = message;
