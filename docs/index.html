@@ -421,19 +421,6 @@
       font-size: 13px;
     }
 
-    #fullscreen {
-      position: absolute;
-      top: max(12px, env(safe-area-inset-top));
-      right: max(12px, env(safe-area-inset-right));
-      z-index: 4;
-      border: 3px solid #172719;
-      padding: 8px 12px 6px;
-      background: rgba(36, 58, 39, 0.9);
-      color: var(--ink);
-      font-size: 14px;
-      cursor: pointer;
-    }
-
     #banner {
       position: absolute;
       top: 14px;
@@ -499,7 +486,6 @@
       <div id="status">准备中…</div>
     </section>
 
-    <button id="fullscreen" type="button">全屏</button>
     <div id="banner" role="alert"></div>
   </main>
 
@@ -512,11 +498,10 @@
     const progress = document.querySelector("#progress");
     const status = document.querySelector("#status");
     const banner = document.querySelector("#banner");
-    const fullscreen = document.querySelector("#fullscreen");
 
     // 每次发布都更换版本号，避免 UnityCache/浏览器继续使用旧的同名构建文件。
     const buildUrl = "Build";
-    const buildVersion = "20260724-coins1";
+    const buildVersion = "20260724-coins2";
     const assetUrl = file => buildUrl + "/" + file + "?v=" + buildVersion;
     const loaderUrl = assetUrl("docs.loader.js");
     const config = {
@@ -571,26 +556,11 @@
 
     startGame.addEventListener("click", () => {
       menu.classList.add("hidden");
-      document.documentElement.requestFullscreen?.().catch(() => {});
       bootGame();
     });
 
     canvas.addEventListener("pointerdown", () => canvas.focus());
     canvas.addEventListener("contextmenu", event => event.preventDefault());
-
-    fullscreen.addEventListener("click", () => {
-      if (document.fullscreenElement) {
-        document.exitFullscreen?.();
-      } else if (document.documentElement.requestFullscreen) {
-        document.documentElement.requestFullscreen().catch(() => {});
-      } else {
-        unityInstance?.SetFullscreen(1);
-      }
-    });
-
-    document.addEventListener("fullscreenchange", () => {
-      fullscreen.textContent = document.fullscreenElement ? "退出全屏" : "全屏";
-    });
   </script>
 </body>
 </html>
