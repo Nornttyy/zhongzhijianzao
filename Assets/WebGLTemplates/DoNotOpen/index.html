@@ -1165,6 +1165,7 @@
       carrot_seed: 0,
       fertilizer: 0,
       wood: 0,
+      hoe: 0,
       wheat_crop: 0,
       carrot_crop: 0
     };
@@ -1237,6 +1238,7 @@
         carrot_seed: "sprite-r0-c1",
         fertilizer: "sprite-r0-c2",
         wood: "sprite-r0-c3",
+        hoe: "sprite-r0-c5",
         wheat_crop: "sprite-r2-c0",
         carrot_crop: "sprite-r2-c1"
       };
@@ -1422,7 +1424,7 @@
 
     // 每次发布都更换版本号，避免 UnityCache/浏览器继续使用旧的同名构建文件。
     const buildUrl = "Build";
-    const buildVersion = "20260724-farm8";
+    const buildVersion = "20260724-farm9";
     const assetUrl = file => buildUrl + "/" + file + "?v=" + buildVersion;
     const loaderUrl = assetUrl("{{{ LOADER_FILENAME }}}");
     const config = {
