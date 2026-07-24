@@ -762,6 +762,12 @@
       font-size: 17px;
     }
 
+    .shop-section-title {
+      margin: 28px 0 12px;
+      color: var(--ink);
+      font-size: 24px;
+    }
+
     .shop-grid {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1019,7 +1025,7 @@
         <div class="inventory-tip">按 E 或 Esc 关闭 · 数字键 1–9 选择快捷栏</div>
       </div>
       <div id="shop-view">
-        <div class="shop-intro">用金币购买种子和农场用品，商品会进入背包与左上角快捷栏。</div>
+        <div class="shop-intro">购买种子开始种田，收获后再出售农作物换取金币。</div>
         <div class="shop-grid">
           <button class="shop-button" data-item="wheat_seed" data-price="5" data-label="小麦种子">
             <span class="shop-icon sprite-r0-c0"></span><span class="shop-copy"><strong>小麦种子</strong><small>种下后可收获小麦 · <span class="price"><span class="coin-sprite coin-small"></span>5</span></small></span>
@@ -1032,6 +1038,15 @@
           </button>
           <button class="shop-button" data-item="wood" data-price="15" data-label="木材">
             <span class="shop-icon sprite-r0-c3"></span><span class="shop-copy"><strong>木材</strong><small>建造系统的基础材料 · <span class="price"><span class="coin-sprite coin-small"></span>15</span></small></span>
+          </button>
+        </div>
+        <div class="shop-section-title">出售农作物</div>
+        <div class="shop-grid">
+          <button class="shop-button" data-sell-item="wheat_crop" data-price="10" data-label="小麦">
+            <span class="shop-icon sprite-r2-c0"></span><span class="shop-copy"><strong>出售小麦</strong><small>每份获得 <span class="price"><span class="coin-sprite coin-small"></span>10</span></small></span>
+          </button>
+          <button class="shop-button" data-sell-item="carrot_crop" data-price="16" data-label="胡萝卜">
+            <span class="shop-icon sprite-r2-c1"></span><span class="shop-copy"><strong>出售胡萝卜</strong><small>每份获得 <span class="price"><span class="coin-sprite coin-small"></span>16</span></small></span>
           </button>
         </div>
       </div>
@@ -1069,7 +1084,9 @@
       wheat_seed: 0,
       carrot_seed: 0,
       fertilizer: 0,
-      wood: 0
+      wood: 0,
+      wheat_crop: 0,
+      carrot_crop: 0
     };
     let hotkeyFeedbackTimer;
 
@@ -1096,19 +1113,26 @@
     };
 
     window.notifyFarmingFeedback = message => showHotkeyFeedback(message);
-    window.notifyHarvest = (itemId, coins) => {
-      const label = itemId === "carrot_seed" ? "胡萝卜" : "小麦";
-      showHotkeyFeedback("收获" + label + "  +" + Number(coins || 0) + "金币");
+    window.notifyHarvest = (itemId, count) => {
+      if (Object.prototype.hasOwnProperty.call(shopInventory, itemId)) {
+        shopInventory[itemId] = Math.max(0, Number(count) || 0);
+        updateInventory();
+      }
+      const label = itemId === "carrot_crop" ? "胡萝卜" : "小麦";
+      showHotkeyFeedback("获得" + label + "，请到商店出售");
     };
 
     function updateInventory() {
-      const items = [
+      const inventoryItems = [
         { sprite: "sprite-r0-c0", count: shopInventory.wheat_seed },
         { sprite: "sprite-r0-c1", count: shopInventory.carrot_seed },
         { sprite: "sprite-r0-c2", count: shopInventory.fertilizer },
-        { sprite: "sprite-r0-c3", count: shopInventory.wood }
+        { sprite: "sprite-r0-c3", count: shopInventory.wood },
+        { sprite: "sprite-r2-c0", count: shopInventory.wheat_crop },
+        { sprite: "sprite-r2-c1", count: shopInventory.carrot_crop }
       ];
-      const slots = items.map(item => item.count > 0
+      const hotbarItems = inventoryItems.slice(0, 4);
+      const slots = inventoryItems.map(item => item.count > 0
         ? "<div class=\"inventory-slot filled\"><span class=\"slot-icon " + item.sprite + "\"></span>" +
           "<span class=\"slot-count\">" + item.count + "</span></div>"
         : "<div class=\"inventory-slot\"></div>");
@@ -1116,8 +1140,8 @@
       inventoryGrid.innerHTML = slots.join("");
       const hotbarMarkup = Array.from({ length: 9 }, (_, index) =>
         "<div class=\"inventory-slot " + (index === selectedHotbarIndex ? "selected" : "") + "\">" +
-        (index < items.length && items[index].count > 0
-          ? "<span class=\"slot-icon " + items[index].sprite + "\"></span><span class=\"slot-count\">" + items[index].count + "</span>"
+        (index < hotbarItems.length && hotbarItems[index].count > 0
+          ? "<span class=\"slot-icon " + hotbarItems[index].sprite + "\"></span><span class=\"slot-count\">" + hotbarItems[index].count + "</span>"
           : "") +
         "</div>").join("");
       hotbarGrid.innerHTML = hotbarMarkup;
@@ -1192,9 +1216,30 @@
       });
     });
 
+    document.querySelectorAll("[data-sell-item]").forEach(button => {
+      button.addEventListener("click", () => {
+        if (!unityInstance) {
+          showHotkeyFeedback("世界还在载入");
+          return;
+        }
+
+        const id = button.dataset.sellItem;
+        const price = Number(button.dataset.price);
+        const label = button.dataset.label;
+        if ((shopInventory[id] || 0) <= 0) {
+          showHotkeyFeedback("背包里没有" + label);
+          return;
+        }
+
+        unityInstance.SendMessage("Prototype Bootstrap", "SellItem", id);
+        showHotkeyFeedback("正在出售" + label);
+        openUtility("shop");
+      });
+    });
+
     // 每次发布都更换版本号，避免 UnityCache/浏览器继续使用旧的同名构建文件。
     const buildUrl = "Build";
-    const buildVersion = "20260724-farm3";
+    const buildVersion = "20260724-farm4";
     const assetUrl = file => buildUrl + "/" + file + "?v=" + buildVersion;
     const loaderUrl = assetUrl("docs.loader.js");
     const config = {
