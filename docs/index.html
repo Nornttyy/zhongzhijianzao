@@ -441,6 +441,35 @@
       display: block;
     }
 
+    #hotkey-hud,
+    #hotkey-feedback {
+      position: absolute;
+      z-index: 5;
+      display: none;
+      color: var(--muted);
+      font-size: 14px;
+      text-shadow: 2px 2px 0 #172219;
+      pointer-events: none;
+    }
+
+    #hotkey-hud {
+      bottom: 18px;
+      left: 18px;
+    }
+
+    #hotkey-feedback {
+      top: 76px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: var(--accent);
+      font-size: 18px;
+    }
+
+    #hotkey-hud.visible,
+    #hotkey-feedback.visible {
+      display: block;
+    }
+
     #banner {
       position: absolute;
       top: 14px;
@@ -507,6 +536,8 @@
     </section>
 
     <div id="coin-display" aria-live="polite">金币: 100</div>
+    <div id="hotkey-hud">E 背包 · I 商店 · 右键 互动/建造</div>
+    <div id="hotkey-feedback" aria-live="polite"></div>
     <div id="banner" role="alert"></div>
   </main>
 
@@ -520,6 +551,16 @@
     const status = document.querySelector("#status");
     const banner = document.querySelector("#banner");
     const coinDisplay = document.querySelector("#coin-display");
+    const hotkeyHud = document.querySelector("#hotkey-hud");
+    const hotkeyFeedback = document.querySelector("#hotkey-feedback");
+    let hotkeyFeedbackTimer;
+
+    function showHotkeyFeedback(message) {
+      hotkeyFeedback.textContent = message;
+      hotkeyFeedback.classList.add("visible");
+      clearTimeout(hotkeyFeedbackTimer);
+      hotkeyFeedbackTimer = setTimeout(() => hotkeyFeedback.classList.remove("visible"), 1200);
+    }
 
     window.setCoinDisplay = value => {
       const amount = Number(value);
@@ -529,7 +570,7 @@
 
     // 每次发布都更换版本号，避免 UnityCache/浏览器继续使用旧的同名构建文件。
     const buildUrl = "Build";
-    const buildVersion = "20260724-hotkeys2";
+    const buildVersion = "20260724-hotkeys3";
     const assetUrl = file => buildUrl + "/" + file + "?v=" + buildVersion;
     const loaderUrl = assetUrl("docs.loader.js");
     const config = {
@@ -585,11 +626,22 @@
     startGame.addEventListener("click", () => {
       menu.classList.add("hidden");
       coinDisplay.classList.add("visible");
+      hotkeyHud.classList.add("visible");
       bootGame();
     });
 
+    document.addEventListener("keydown", event => {
+      if (!menu.classList.contains("hidden")) return;
+      const key = event.key.toLowerCase();
+      if (key === "e") showHotkeyFeedback("E：背包");
+      if (key === "i") showHotkeyFeedback("I：商店");
+    });
+
     canvas.addEventListener("pointerdown", () => canvas.focus());
-    canvas.addEventListener("contextmenu", event => event.preventDefault());
+    canvas.addEventListener("contextmenu", event => {
+      event.preventDefault();
+      if (menu.classList.contains("hidden")) showHotkeyFeedback("右键：互动 / 建造");
+    });
   </script>
 </body>
 </html>
