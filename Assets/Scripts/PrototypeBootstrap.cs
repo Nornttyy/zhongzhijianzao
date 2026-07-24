@@ -5,6 +5,8 @@ namespace DoNotOpen.Prototype
     public sealed class PrototypeBootstrap : MonoBehaviour
     {
         private const float PlayerPixelsPerUnit = 12f;
+        private ShopSystem shop;
+        private FarmingSystem farming;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void EnsurePrototypeExists()
@@ -47,10 +49,10 @@ namespace DoNotOpen.Prototype
             buildings.Initialize(player, world);
             player.Buildings = buildings;
 
-            ShopSystem shop = gameObject.AddComponent<ShopSystem>();
+            shop = gameObject.AddComponent<ShopSystem>();
             shop.Initialize(player);
 
-            FarmingSystem farming = gameObject.AddComponent<FarmingSystem>();
+            farming = gameObject.AddComponent<FarmingSystem>();
             farming.Initialize(player, world, shop, farmingTexture);
 
             CameraFollow follow = camera.gameObject.AddComponent<CameraFollow>();
@@ -58,6 +60,25 @@ namespace DoNotOpen.Prototype
 
             PrototypeHud hud = gameObject.AddComponent<PrototypeHud>();
             hud.Initialize(world, player, pixelFont);
+        }
+
+        // Explicit entry points for the web page. Keeping these on the
+        // bootstrap object avoids relying on SendMessage finding a sibling
+        // component in an IL2CPP WebGL build.
+        public void BuyItem(string itemId)
+        {
+            if (shop != null)
+            {
+                shop.BuyItem(itemId);
+            }
+        }
+
+        public void SelectHotbarItem(string itemId)
+        {
+            if (farming != null)
+            {
+                farming.SelectHotbarItem(itemId);
+            }
         }
 
         private static Camera BuildCamera()
