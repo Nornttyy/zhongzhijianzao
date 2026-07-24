@@ -1124,6 +1124,7 @@
       inventoryView.style.display = isShop ? "none" : "block";
       shopView.classList.toggle("visible", isShop);
       updateInventory();
+      setGameInputLocked(true);
 
       if (isShop) {
         utilityPanel.classList.add("shop-screen");
@@ -1139,9 +1140,24 @@
       const isShop = utilityPanel.classList.contains("shop-screen");
       utilityPanel.classList.remove("visible");
       utilityMode = null;
-      canvas.focus();
       if (isShop) {
-        window.setTimeout(() => utilityPanel.classList.remove("shop-screen"), 380);
+        window.setTimeout(() => {
+          utilityPanel.classList.remove("shop-screen");
+          setGameInputLocked(false);
+        }, 380);
+      } else {
+        setGameInputLocked(false);
+      }
+    }
+
+    function setGameInputLocked(locked) {
+      if (unityInstance) {
+        unityInstance.SendMessage("Player", "SetInputLocked", locked ? "true" : "false");
+      }
+      if (locked) {
+        canvas.blur();
+      } else {
+        canvas.focus();
       }
     }
 
@@ -1171,7 +1187,7 @@
 
     // 每次发布都更换版本号，避免 UnityCache/浏览器继续使用旧的同名构建文件。
     const buildUrl = "Build";
-    const buildVersion = "20260724-shop14";
+    const buildVersion = "20260724-shop15";
     const assetUrl = file => buildUrl + "/" + file + "?v=" + buildVersion;
     const loaderUrl = assetUrl("docs.loader.js");
     const config = {
@@ -1242,6 +1258,11 @@
         return;
       }
       const key = event.key.toLowerCase();
+      if (utilityMode && key !== "e" && key !== "i" && event.key !== "Escape") {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        return;
+      }
       if (key === "e") {
         event.preventDefault();
         utilityMode === "inventory" ? closeUtility() : openUtility("inventory");
@@ -1260,10 +1281,12 @@
       }
     }, true);
 
-    canvas.addEventListener("pointerdown", () => canvas.focus());
+    canvas.addEventListener("pointerdown", () => {
+      if (!utilityMode) canvas.focus();
+    });
     canvas.addEventListener("contextmenu", event => {
       event.preventDefault();
-      if (gameReady && menu.classList.contains("hidden")) showHotkeyFeedback("右键：互动 / 建造");
+      if (gameReady && !utilityMode && menu.classList.contains("hidden")) showHotkeyFeedback("右键：互动 / 建造");
     });
   </script>
 </body>
