@@ -9,6 +9,7 @@ namespace DoNotOpen.Prototype
         private Font pixelFont;
         private GUIStyle titleStyle;
         private GUIStyle bodyStyle;
+        private GUIStyle coinStyle;
         private GUIStyle coordinateStyle;
         private GUIStyle interactionStyle;
         private GUIStyle menuTitleStyle;
@@ -55,6 +56,14 @@ namespace DoNotOpen.Prototype
             GUI.Box(new Rect(18f, 18f, 240f, 62f), GUIContent.none);
             GUI.Label(new Rect(32f, 27f, 212f, 25f), "种植建造", titleStyle);
             GUI.Label(new Rect(32f, 55f, 212f, 20f), "WASD 移动 · R 返回", bodyStyle);
+
+            const float coinPanelWidth = 160f;
+            Rect coinPanel = new Rect(Screen.width - coinPanelWidth - 18f, 18f, coinPanelWidth, 38f);
+            GUI.Box(coinPanel, GUIContent.none);
+            GUI.Label(
+                new Rect(coinPanel.x + 10f, coinPanel.y + 7f, coinPanel.width - 20f, 24f),
+                "金币  " + player.Coins.ToString("N0"),
+                coinStyle);
 
             Vector2Int tile = world.WorldToTile(player.transform.position);
             string coordinates = world.IsInCave
@@ -107,6 +116,13 @@ namespace DoNotOpen.Prototype
                 font = pixelFont,
                 fontSize = 16,
                 normal = { textColor = new Color(0.86f, 0.91f, 0.80f) }
+            };
+
+            coinStyle = new GUIStyle(bodyStyle)
+            {
+                fontSize = 18,
+                alignment = TextAnchor.MiddleCenter,
+                normal = { textColor = new Color(1f, 0.88f, 0.40f) }
             };
 
             coordinateStyle = new GUIStyle(bodyStyle)
