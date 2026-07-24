@@ -427,15 +427,16 @@
       right: 18px;
       z-index: 5;
       display: none;
-      min-width: 190px;
-      min-height: 56px;
-      border: 3px solid #172719;
-      padding: 7px 14px 5px;
-      background: rgba(27, 43, 29, 0.96);
+      min-width: 0;
+      min-height: 36px;
+      border: 0;
+      padding: 0;
+      background: transparent;
       color: var(--accent);
       font-size: 21px;
       line-height: 34px;
       text-align: center;
+      text-shadow: 2px 2px 0 #172219;
       align-items: center;
       justify-content: center;
       gap: 7px;
@@ -762,9 +763,9 @@
       #coin-display {
         top: 20px;
         right: 12px;
-        min-width: 148px;
-        min-height: 46px;
-        padding: 5px 9px 4px;
+        min-width: 0;
+        min-height: 32px;
+        padding: 0;
         font-size: 17px;
         line-height: 28px;
         gap: 6px;
@@ -1053,7 +1054,7 @@
 
     // 每次发布都更换版本号，避免 UnityCache/浏览器继续使用旧的同名构建文件。
     const buildUrl = "Build";
-    const buildVersion = "20260724-shop9";
+    const buildVersion = "20260724-shop10";
     const assetUrl = file => buildUrl + "/" + file + "?v=" + buildVersion;
     const loaderUrl = assetUrl("docs.loader.js");
     const config = {
