@@ -19,9 +19,6 @@ namespace DoNotOpen.Prototype
         {
             Application.targetFrameRate = 120;
             QualitySettings.antiAliasing = 0;
-            // 让独立运行版本直接铺满屏幕；网页版本的全屏由主界面的按钮触发。
-            Screen.fullScreenMode = FullScreenMode.FullScreenWindow;
-            Screen.fullScreen = true;
 
             Texture2D worldTexture = LoadPixelTexture("PixelArt/world-tiles");
             Texture2D playerTexture = LoadPixelTexture("PixelArt/player-idle");
