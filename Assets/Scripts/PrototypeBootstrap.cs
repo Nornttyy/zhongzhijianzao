@@ -23,11 +23,13 @@ namespace DoNotOpen.Prototype
             Texture2D worldTexture = LoadPixelTexture("PixelArt/world-tiles");
             Texture2D playerTexture = LoadPixelTexture("PixelArt/player-idle");
             Texture2D caveEntranceTexture = LoadPixelTexture("PixelArt/cave-entrance");
+            Texture2D farmingTexture = LoadPixelTexture("PixelArt/shop-materials");
             Font pixelFont = Resources.Load<Font>("Fonts/ark-pixel-12px");
 
             if (worldTexture == null ||
                 playerTexture == null ||
                 caveEntranceTexture == null ||
+                farmingTexture == null ||
                 pixelFont == null)
             {
                 Debug.LogError("One or more pixel-art resources could not be loaded.");
@@ -47,6 +49,9 @@ namespace DoNotOpen.Prototype
 
             ShopSystem shop = gameObject.AddComponent<ShopSystem>();
             shop.Initialize(player);
+
+            FarmingSystem farming = gameObject.AddComponent<FarmingSystem>();
+            farming.Initialize(player, world, shop, farmingTexture);
 
             CameraFollow follow = camera.gameObject.AddComponent<CameraFollow>();
             follow.Initialize(player.transform, world.MapBounds);
