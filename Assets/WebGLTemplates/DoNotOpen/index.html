@@ -1083,7 +1083,7 @@
       const amount = Number(value);
       coinAmount = Number.isFinite(amount) ? amount : 0;
       coinAmountLabel.textContent = coinAmount.toLocaleString("zh-CN");
-      coinDisplay.classList.add("visible");
+      if (gameReady) coinDisplay.classList.add("visible");
       updateInventory();
     };
 
@@ -1171,7 +1171,7 @@
 
     // 每次发布都更换版本号，避免 UnityCache/浏览器继续使用旧的同名构建文件。
     const buildUrl = "Build";
-    const buildVersion = "20260724-shop13";
+    const buildVersion = "20260724-shop14";
     const assetUrl = file => buildUrl + "/" + file + "?v=" + buildVersion;
     const loaderUrl = assetUrl("{{{ LOADER_FILENAME }}}");
     const config = {
@@ -1193,6 +1193,7 @@
 
     let unityInstance;
     let bootStarted = false;
+    let gameReady = false;
 
     function bootGame() {
       if (bootStarted) return;
@@ -1208,7 +1209,12 @@
           status.textContent = "载入 " + percent + "%";
         }).then(instance => {
           unityInstance = instance;
+          gameReady = true;
           loading.classList.add("done");
+          coinDisplay.classList.add("visible");
+          persistentHotbar.classList.add("visible");
+          shopToggle.classList.add("visible");
+          hotkeyHud.classList.add("visible");
           canvas.focus();
         }).catch(message => {
           banner.textContent = message;
@@ -1226,15 +1232,15 @@
 
     startGame.addEventListener("click", () => {
       menu.classList.add("hidden");
-      coinDisplay.classList.add("visible");
-      persistentHotbar.classList.add("visible");
-      shopToggle.classList.add("visible");
-      hotkeyHud.classList.add("visible");
       bootGame();
     });
 
     document.addEventListener("keydown", event => {
       if (!menu.classList.contains("hidden")) return;
+      if (!gameReady) {
+        event.preventDefault();
+        return;
+      }
       const key = event.key.toLowerCase();
       if (key === "e") {
         event.preventDefault();
@@ -1257,7 +1263,7 @@
     canvas.addEventListener("pointerdown", () => canvas.focus());
     canvas.addEventListener("contextmenu", event => {
       event.preventDefault();
-      if (menu.classList.contains("hidden")) showHotkeyFeedback("右键：互动 / 建造");
+      if (gameReady && menu.classList.contains("hidden")) showHotkeyFeedback("右键：互动 / 建造");
     });
   </script>
 </body>
