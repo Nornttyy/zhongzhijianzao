@@ -59,10 +59,12 @@ namespace DoNotOpen.Prototype
 
             const float coinPanelWidth = 160f;
             Rect coinPanel = new Rect(Screen.width - coinPanelWidth - 18f, 18f, coinPanelWidth, 38f);
-            GUI.Box(coinPanel, GUIContent.none);
+            GUI.color = new Color(0.08f, 0.14f, 0.09f, 0.96f);
+            GUI.DrawTexture(coinPanel, Texture2D.whiteTexture);
+            GUI.color = Color.white;
             GUI.Label(
                 new Rect(coinPanel.x + 10f, coinPanel.y + 7f, coinPanel.width - 20f, 24f),
-                "金币  " + player.Coins.ToString("N0"),
+                "金币: " + player.Coins.ToString("N0"),
                 coinStyle);
 
             Vector2Int tile = world.WorldToTile(player.transform.position);
@@ -226,7 +228,6 @@ namespace DoNotOpen.Prototype
                 player.enabled = true;
             }
 
-            Screen.fullScreen = true;
         }
 
         private static Texture2D CreateColorTexture(Color color)
