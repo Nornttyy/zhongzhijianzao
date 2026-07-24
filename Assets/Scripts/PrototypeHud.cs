@@ -62,15 +62,11 @@ namespace DoNotOpen.Prototype
                 return;
             }
 
-            GUI.Box(new Rect(18f, 18f, 240f, 62f), GUIContent.none);
             GUI.Label(new Rect(32f, 27f, 212f, 25f), "种植建造", titleStyle);
             GUI.Label(new Rect(32f, 55f, 212f, 20f), "WASD 移动 · R 返回", bodyStyle);
 
             const float coinPanelWidth = 160f;
             Rect coinPanel = new Rect(Screen.width - coinPanelWidth - 18f, 18f, coinPanelWidth, 38f);
-            GUI.color = new Color(0.08f, 0.14f, 0.09f, 0.96f);
-            GUI.DrawTexture(coinPanel, Texture2D.whiteTexture);
-            GUI.color = Color.white;
             GUI.Label(
                 new Rect(coinPanel.x + 10f, coinPanel.y + 7f, coinPanel.width - 20f, 24f),
                 "金币: " + player.Coins.ToString("N0"),
@@ -82,7 +78,6 @@ namespace DoNotOpen.Prototype
                 : "坐标 " + tile.x.ToString("N0") + "，" + tile.y.ToString("N0");
             Vector2 size = coordinateStyle.CalcSize(new GUIContent(coordinates));
             Rect panel = new Rect((Screen.width - size.x) * 0.5f - 14f, Screen.height - 56f, size.x + 28f, 38f);
-            GUI.Box(panel, GUIContent.none);
             GUI.Label(new Rect(panel.x + 14f, panel.y + 7f, size.x, 24f), coordinates, coordinateStyle);
 
             string interaction = world.GetInteractionHint(player.transform.position);
@@ -95,7 +90,6 @@ namespace DoNotOpen.Prototype
                     Screen.height - 102f,
                     hintPanelWidth,
                     34f);
-                GUI.Box(hintPanel, GUIContent.none);
                 GUI.Label(
                     new Rect(
                         hintPanel.x + 14f,
