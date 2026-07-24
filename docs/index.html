@@ -1088,6 +1088,7 @@
     const coinAmountLabel = document.querySelector("#coin-amount");
     const persistentHotbar = document.querySelector("#persistent-hotbar");
     const shopToggle = document.querySelector("#shop-toggle");
+    const sellToggle = document.querySelector("#sell-toggle");
     const hotkeyHud = document.querySelector("#hotkey-hud");
     const hotkeyFeedback = document.querySelector("#hotkey-feedback");
     const utilityPanel = document.querySelector("#utility-panel");
@@ -1097,6 +1098,7 @@
     const inventoryGrid = document.querySelector("#inventory-grid");
     const hotbarGrid = document.querySelector("#hotbar-grid");
     const shopView = document.querySelector("#shop-view");
+    const sellView = document.querySelector("#sell-view");
     let utilityMode = null;
     let selectedHotbarIndex = 0;
     let coinAmount = 100;
@@ -1257,13 +1259,16 @@
     function openUtility(mode) {
       utilityMode = mode;
       const isShop = mode === "shop";
-      utilityTitle.textContent = isShop ? "商店" : "背包";
-      inventoryView.style.display = isShop ? "none" : "block";
+      const isSell = mode === "sell";
+      const isFullScreen = isShop || isSell;
+      utilityTitle.textContent = isShop ? "商店" : isSell ? "出售" : "背包";
+      inventoryView.style.display = isFullScreen ? "none" : "block";
       shopView.classList.toggle("visible", isShop);
+      sellView.classList.toggle("visible", isSell);
       updateInventory();
       setGameInputLocked(true);
 
-      if (isShop) {
+      if (isFullScreen) {
         utilityPanel.classList.add("shop-screen");
         utilityPanel.classList.remove("visible");
         requestAnimationFrame(() => utilityPanel.classList.add("visible"));
@@ -1274,10 +1279,10 @@
     }
 
     function closeUtility() {
-      const isShop = utilityPanel.classList.contains("shop-screen");
+      const isFullScreen = utilityPanel.classList.contains("shop-screen");
       utilityPanel.classList.remove("visible");
       utilityMode = null;
-      if (isShop) {
+      if (isFullScreen) {
         window.setTimeout(() => {
           utilityPanel.classList.remove("shop-screen");
           setGameInputLocked(false);
@@ -1300,6 +1305,7 @@
 
     utilityClose.addEventListener("click", closeUtility);
     shopToggle.addEventListener("click", () => openUtility("shop"));
+    sellToggle.addEventListener("click", () => openUtility("sell"));
 
     document.querySelectorAll("[data-item]").forEach(button => {
       button.addEventListener("click", () => {
@@ -1339,13 +1345,13 @@
 
         unityInstance.SendMessage("Prototype Bootstrap", "SellItem", id);
         showHotkeyFeedback("正在出售" + label);
-        openUtility("shop");
+        openUtility("sell");
       });
     });
 
     // 每次发布都更换版本号，避免 UnityCache/浏览器继续使用旧的同名构建文件。
     const buildUrl = "Build";
-    const buildVersion = "20260724-farm7";
+    const buildVersion = "20260724-farm8";
     const assetUrl = file => buildUrl + "/" + file + "?v=" + buildVersion;
     const loaderUrl = assetUrl("docs.loader.js");
     const config = {
@@ -1389,6 +1395,7 @@
           persistentHotbar.classList.add("visible");
           shopToggle.classList.add("visible");
           hotkeyHud.classList.add("visible");
+          sellToggle.classList.add("visible");
           canvas.focus();
         }).catch(message => {
           banner.textContent = message;
