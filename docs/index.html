@@ -615,15 +615,14 @@
 
     #persistent-hotbar .inventory-slot,
     #persistent-hotbar .inventory-slot.filled {
-      border: 0;
-      background: transparent;
-      box-shadow: none;
+      border: 2px solid #1b1b1b;
+      background: #777777;
+      box-shadow: inset 2px 2px 0 #a1a1a1, inset -2px -2px 0 #4b4b4b;
     }
 
     #persistent-hotbar .inventory-slot.selected {
-      border: 0;
-      box-shadow: inset 0 -3px 0 #fff2a8;
-      transform: translateY(-1px);
+      border-color: #fff2a8;
+      box-shadow: inset 2px 2px 0 #fff2a8, inset -2px -2px 0 #b69a42;
     }
 
     .inventory-slot {
@@ -1073,7 +1072,7 @@
 
     // 每次发布都更换版本号，避免 UnityCache/浏览器继续使用旧的同名构建文件。
     const buildUrl = "Build";
-    const buildVersion = "20260724-shop11";
+    const buildVersion = "20260724-shop12";
     const assetUrl = file => buildUrl + "/" + file + "?v=" + buildVersion;
     const loaderUrl = assetUrl("docs.loader.js");
     const config = {
