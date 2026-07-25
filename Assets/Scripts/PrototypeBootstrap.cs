@@ -15,6 +15,7 @@ namespace DoNotOpen.Prototype
         private FarmingSystem farming;
         private ProceduralWorld world;
         private TopDownPlayer player;
+        private WeaponSystem weapon;
         private bool saveReady;
         private float nextAutosaveTime;
 
@@ -102,6 +103,9 @@ namespace DoNotOpen.Prototype
 
             farming = gameObject.AddComponent<FarmingSystem>();
             farming.Initialize(player, world, shop, farmingTexture);
+
+            weapon = gameObject.AddComponent<WeaponSystem>();
+            weapon.Initialize(player, world, shop);
 
             CameraFollow follow = camera.gameObject.AddComponent<CameraFollow>();
             follow.Initialize(player.transform, world.MapBounds);
@@ -263,6 +267,10 @@ namespace DoNotOpen.Prototype
             if (farming != null)
             {
                 farming.SelectHotbarItem(itemId);
+            }
+            if (weapon != null)
+            {
+                weapon.SelectHotbarItem(itemId);
             }
         }
 
