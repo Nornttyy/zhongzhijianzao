@@ -1227,6 +1227,7 @@
     let coinAmount = 100;
     const inventorySlots = Array(27).fill(null);
     const hotbarSlots = Array(9).fill(null);
+    const saveStorageKey = "zhongzhijianzao-save-v1";
     const shopInventory = {
       wheat_seed: 0,
       carrot_seed: 0,
@@ -1238,6 +1239,22 @@
     };
     let hotkeyFeedbackTimer;
     let utilityNoticeTimer;
+
+    window.SaveGameData = json => {
+      try {
+        localStorage.setItem(saveStorageKey, json || "");
+      } catch (error) {
+        // 浏览器禁用本地存储时，游戏仍可继续运行。
+      }
+    };
+
+    window.LoadGameData = () => {
+      try {
+        return localStorage.getItem(saveStorageKey) || "";
+      } catch (error) {
+        return "";
+      }
+    };
 
     function showHotkeyFeedback(message) {
       if (utilityMode === "shop" || utilityMode === "sell") {
@@ -1510,7 +1527,7 @@
 
     // 每次发布都更换版本号，避免 UnityCache/浏览器继续使用旧的同名构建文件。
     const buildUrl = "Build";
-    const buildVersion = "20260724-farm13";
+    const buildVersion = "20260724-farm14";
     const assetUrl = file => buildUrl + "/" + file + "?v=" + buildVersion;
     const loaderUrl = assetUrl("docs.loader.js");
     const config = {
