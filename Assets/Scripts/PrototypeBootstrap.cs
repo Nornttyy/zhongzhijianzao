@@ -1,12 +1,53 @@
+using System;
+using System.Collections.Generic;
 using UnityEngine;
+#if UNITY_WEBGL && !UNITY_EDITOR
+using System.Runtime.InteropServices;
+#endif
 
 namespace DoNotOpen.Prototype
 {
     public sealed class PrototypeBootstrap : MonoBehaviour
     {
         private const float PlayerPixelsPerUnit = 12f;
+        private const float AutosaveInterval = 1.5f;
         private ShopSystem shop;
         private FarmingSystem farming;
+        private ProceduralWorld world;
+        private TopDownPlayer player;
+        private bool saveReady;
+        private float nextAutosaveTime;
+
+        [Serializable]
+        private sealed class SavedTileData
+        {
+            public int x;
+            public int y;
+        }
+
+        [Serializable]
+        private sealed class GameSaveData
+        {
+            public int version = 1;
+            public int coins;
+            public bool hasPlayerPosition;
+            public float playerX;
+            public float playerY;
+            public List<ShopSystem.ItemSaveData> items =
+                new List<ShopSystem.ItemSaveData>();
+            public List<SavedTileData> tilledTiles =
+                new List<SavedTileData>();
+            public List<FarmingSystem.CropSaveData> crops =
+                new List<FarmingSystem.CropSaveData>();
+        }
+
+#if UNITY_WEBGL && !UNITY_EDITOR
+        [DllImport("__Internal")]
+        private static extern void SaveGameData(string json);
+
+        [DllImport("__Internal")]
+        private static extern string LoadGameData();
+#endif
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void EnsurePrototypeExists()
@@ -39,9 +80,9 @@ namespace DoNotOpen.Prototype
             }
 
             Camera camera = BuildCamera();
-            TopDownPlayer player = BuildPlayer(playerTexture);
+            player = BuildPlayer(playerTexture);
 
-            ProceduralWorld world = gameObject.AddComponent<ProceduralWorld>();
+            world = gameObject.AddComponent<ProceduralWorld>();
             world.Initialize(worldTexture, caveEntranceTexture, player);
             player.World = world;
 
@@ -60,6 +101,137 @@ namespace DoNotOpen.Prototype
 
             PrototypeHud hud = gameObject.AddComponent<PrototypeHud>();
             hud.Initialize(world, player, pixelFont);
+
+            LoadSavedGame();
+            saveReady = true;
+            nextAutosaveTime = Time.time + AutosaveInterval;
+        }
+
+        private void Update()
+        {
+            if (!saveReady || Time.time < nextAutosaveTime)
+            {
+                return;
+            }
+
+            SaveCurrentGame();
+            nextAutosaveTime = Time.time + AutosaveInterval;
+        }
+
+        private void OnApplicationPause(bool pauseStatus)
+        {
+            if (pauseStatus)
+            {
+                SaveCurrentGame();
+            }
+        }
+
+        private void OnApplicationFocus(bool hasFocus)
+        {
+            if (!hasFocus)
+            {
+                SaveCurrentGame();
+            }
+        }
+
+        private void LoadSavedGame()
+        {
+            string json = null;
+#if UNITY_WEBGL && !UNITY_EDITOR
+            json = LoadGameData();
+#else
+            json = PlayerPrefs.GetString("zhongzhijianzao-save-v1", string.Empty);
+#endif
+            if (string.IsNullOrEmpty(json))
+            {
+                return;
+            }
+
+            try
+            {
+                GameSaveData data = JsonUtility.FromJson<GameSaveData>(json);
+                if (data == null)
+                {
+                    return;
+                }
+
+                player.SetCoins(data.coins);
+                if (data.items != null)
+                {
+                    shop.RestoreItems(data.items);
+                }
+
+                if (data.tilledTiles != null)
+                {
+                    foreach (SavedTileData savedTile in data.tilledTiles)
+                    {
+                        if (savedTile != null)
+                        {
+                            world.RestoreTilledTile(
+                                new Vector2Int(savedTile.x, savedTile.y));
+                        }
+                    }
+                }
+
+                if (data.crops != null)
+                {
+                    foreach (FarmingSystem.CropSaveData savedCrop in data.crops)
+                    {
+                        farming.RestoreCrop(savedCrop);
+                    }
+                }
+
+                if (data.hasPlayerPosition)
+                {
+                    Vector2 savedPosition = new Vector2(data.playerX, data.playerY);
+                    if (world.MapBounds.Contains(
+                            new Vector3(savedPosition.x, savedPosition.y, 0f)) &&
+                        world.CanStandAt(savedPosition, 0.2f))
+                    {
+                        player.Teleport(savedPosition);
+                    }
+                }
+
+                farming.RefreshGrowth();
+            }
+            catch (Exception exception)
+            {
+                Debug.LogWarning("存档读取失败，将使用新游戏：" + exception.Message);
+            }
+        }
+
+        private void SaveCurrentGame()
+        {
+            if (!saveReady || player == null || world == null || shop == null || farming == null)
+            {
+                return;
+            }
+
+            GameSaveData data = new GameSaveData
+            {
+                coins = player.Coins,
+                hasPlayerPosition = true,
+                playerX = player.transform.position.x,
+                playerY = player.transform.position.y,
+                items = shop.CaptureItems(),
+                crops = farming.CaptureCrops()
+            };
+            foreach (Vector2Int tile in world.CaptureTilledTiles())
+            {
+                data.tilledTiles.Add(new SavedTileData
+                {
+                    x = tile.x,
+                    y = tile.y
+                });
+            }
+
+            string json = JsonUtility.ToJson(data);
+#if UNITY_WEBGL && !UNITY_EDITOR
+            SaveGameData(json);
+#else
+            PlayerPrefs.SetString("zhongzhijianzao-save-v1", json);
+            PlayerPrefs.Save();
+#endif
         }
 
         // Explicit entry points for the web page. Keeping these on the
