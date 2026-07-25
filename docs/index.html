@@ -1287,7 +1287,7 @@
     let draggedSlot = null;
 
     function bindInventoryDrag() {
-      document.querySelectorAll("#inventory-view .inventory-slot").forEach(slot => {
+      document.querySelectorAll("#inventory-view .inventory-slot, #persistent-hotbar .inventory-slot").forEach(slot => {
         slot.addEventListener("dragstart", event => {
           if (slot.dataset.draggable !== "true" && slot.getAttribute("draggable") !== "true") {
             event.preventDefault();
@@ -1306,6 +1306,12 @@
         slot.addEventListener("dragend", () => {
           slot.classList.remove("dragging");
           draggedSlot = null;
+        });
+        slot.addEventListener("click", () => {
+          if (slot.dataset.slotType !== "hotbar") return;
+          selectedHotbarIndex = Number(slot.dataset.slotIndex);
+          updateInventory();
+          sendSelectedHotbarItem();
         });
         slot.addEventListener("dragover", event => event.preventDefault());
         slot.addEventListener("drop", event => {
@@ -1333,8 +1339,8 @@
 
     function sendSelectedHotbarItem() {
       const itemId = hotbarSlots[selectedHotbarIndex];
-      if (unityInstance && itemId) {
-        unityInstance.SendMessage("Prototype Bootstrap", "SelectHotbarItem", itemId);
+      if (unityInstance) {
+        unityInstance.SendMessage("Prototype Bootstrap", "SelectHotbarItem", itemId || "");
       }
     }
 
@@ -1433,7 +1439,7 @@
 
     // 每次发布都更换版本号，避免 UnityCache/浏览器继续使用旧的同名构建文件。
     const buildUrl = "Build";
-    const buildVersion = "20260724-farm11";
+    const buildVersion = "20260724-farm12";
     const assetUrl = file => buildUrl + "/" + file + "?v=" + buildVersion;
     const loaderUrl = assetUrl("docs.loader.js");
     const config = {
