@@ -650,6 +650,63 @@
       padding: 0 8px;
     }
 
+    .utility-wallet {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-left: auto;
+      margin-right: 14px;
+      border: 3px solid #1b1b1b;
+      padding: 6px 12px;
+      background: #777777;
+      box-shadow: inset 2px 2px 0 #a1a1a1, inset -2px -2px 0 #4b4b4b;
+      color: #fff2a8;
+      font-size: 18px;
+      line-height: 1.2;
+      white-space: nowrap;
+    }
+
+    .utility-wallet .coin-small {
+      width: 24px;
+      height: 24px;
+      flex-basis: 24px;
+    }
+
+    #utility-notice {
+      min-height: 24px;
+      margin: -10px auto 16px;
+      border: 2px solid transparent;
+      padding: 7px 12px;
+      color: #d9dfc7;
+      font-size: 16px;
+      line-height: 1.35;
+      opacity: 0;
+      text-align: center;
+      transition: opacity 160ms ease;
+    }
+
+    #utility-notice.visible {
+      opacity: 1;
+      border-color: #6e8050;
+      background: rgba(42, 64, 43, 0.86);
+    }
+
+    #utility-notice.success {
+      border-color: #a6ce67;
+      color: #efffc8;
+    }
+
+    #utility-notice.error {
+      border-color: #d27a68;
+      background: rgba(91, 47, 42, 0.9);
+      color: #ffd5c7;
+    }
+
+    #utility-panel.shop-screen #utility-notice {
+      max-width: 1100px;
+      margin: -8px auto 20px;
+    }
+
     #utility-title {
       color: var(--ink);
       font-size: 32px;
@@ -1096,8 +1153,10 @@
     <section id="utility-panel" aria-label="背包和商店">
       <div id="utility-title-row">
         <div id="utility-title">背包</div>
+        <div class="utility-wallet" aria-live="polite"><span class="coin-sprite coin-small"></span><span>金币</span><span id="utility-coin-amount">0</span></div>
         <button id="utility-close" type="button" aria-label="关闭">×</button>
       </div>
+      <div id="utility-notice" role="status" aria-live="polite"></div>
       <div id="inventory-view">
         <div class="inventory-grid" id="inventory-grid"></div>
         <div class="hotbar-label">快捷栏</div>
@@ -1155,6 +1214,8 @@
     const hotkeyFeedback = document.querySelector("#hotkey-feedback");
     const utilityPanel = document.querySelector("#utility-panel");
     const utilityTitle = document.querySelector("#utility-title");
+    const utilityCoinAmount = document.querySelector("#utility-coin-amount");
+    const utilityNotice = document.querySelector("#utility-notice");
     const utilityClose = document.querySelector("#utility-close");
     const inventoryView = document.querySelector("#inventory-view");
     const inventoryGrid = document.querySelector("#inventory-grid");
@@ -1176,18 +1237,28 @@
       carrot_crop: 0
     };
     let hotkeyFeedbackTimer;
+    let utilityNoticeTimer;
 
     function showHotkeyFeedback(message) {
-      hotkeyFeedback.textContent = message;
-      hotkeyFeedback.classList.add("visible");
-      clearTimeout(hotkeyFeedbackTimer);
-      hotkeyFeedbackTimer = setTimeout(() => hotkeyFeedback.classList.remove("visible"), 1200);
+      if (utilityMode === "shop" || utilityMode === "sell") {
+        showUtilityNotice(message);
+      }
+    }
+
+    function showUtilityNotice(message, kind = "info") {
+      utilityNotice.textContent = message;
+      utilityNotice.className = "visible " + kind;
+      clearTimeout(utilityNoticeTimer);
+      utilityNoticeTimer = setTimeout(() => {
+        utilityNotice.className = "";
+      }, 1800);
     }
 
     window.setCoinDisplay = value => {
       const amount = Number(value);
       coinAmount = Number.isFinite(amount) ? amount : 0;
       coinAmountLabel.textContent = coinAmount.toLocaleString("zh-CN");
+      utilityCoinAmount.textContent = coinAmount.toLocaleString("zh-CN");
       if (gameReady) coinDisplay.classList.add("visible");
       updateInventory();
     };
@@ -1406,13 +1477,13 @@
         const price = Number(button.dataset.price);
         const label = button.dataset.label;
         if (coinAmount < price) {
-          showHotkeyFeedback("金币不足");
+          showUtilityNotice("金币不足，无法购买" + label, "error");
           return;
         }
 
         unityInstance.SendMessage("Prototype Bootstrap", "BuyItem", id);
-        showHotkeyFeedback("正在购买" + label);
         openUtility("shop");
+        showUtilityNotice("已购买" + label, "success");
       });
     });
 
@@ -1427,19 +1498,19 @@
         const price = Number(button.dataset.price);
         const label = button.dataset.label;
         if ((shopInventory[id] || 0) <= 0) {
-          showHotkeyFeedback("背包里没有" + label);
+          showUtilityNotice("背包里没有可出售的" + label, "error");
           return;
         }
 
         unityInstance.SendMessage("Prototype Bootstrap", "SellItem", id);
-        showHotkeyFeedback("正在出售" + label);
         openUtility("sell");
+        showUtilityNotice("已出售" + label + "，获得" + price + "金币", "success");
       });
     });
 
     // 每次发布都更换版本号，避免 UnityCache/浏览器继续使用旧的同名构建文件。
     const buildUrl = "Build";
-    const buildVersion = "20260724-farm12";
+    const buildVersion = "20260724-farm13";
     const assetUrl = file => buildUrl + "/" + file + "?v=" + buildVersion;
     const loaderUrl = assetUrl("docs.loader.js");
     const config = {
