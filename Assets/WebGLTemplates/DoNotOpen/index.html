@@ -188,6 +188,116 @@
       opacity: 0;
     }
 
+    #world-select {
+      position: absolute;
+      inset: 0;
+      z-index: 16;
+      display: none;
+      place-items: center;
+      padding: 24px;
+      background: #1d2c20;
+    }
+
+    #world-select.visible {
+      display: grid;
+    }
+
+    .world-select-card {
+      display: grid;
+      width: min(720px, 94vw);
+      gap: 16px;
+      border: 5px solid #b0a77c;
+      padding: 30px;
+      background: #3c3c3c;
+      box-shadow: inset 0 0 0 4px #191919, 0 8px 0 #151515;
+    }
+
+    .world-select-title {
+      color: #fff2a8;
+      font-size: 32px;
+      text-align: center;
+    }
+
+    .world-select-subtitle {
+      color: #d9dfc7;
+      font-size: 15px;
+      text-align: center;
+    }
+
+    #world-list {
+      display: grid;
+      gap: 10px;
+      margin: 6px 0;
+    }
+
+    .world-card {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      min-height: 72px;
+      border: 3px solid #1b1b1b;
+      padding: 12px 14px;
+      background: #5a5a5a;
+    }
+
+    .world-card.empty {
+      background: #484848;
+    }
+
+    .world-card-copy {
+      display: grid;
+      gap: 4px;
+    }
+
+    .world-card-copy strong {
+      color: #fff2a8;
+      font-size: 19px;
+      font-weight: normal;
+    }
+
+    .world-card-copy small {
+      color: #d0d0d0;
+      font-size: 13px;
+    }
+
+    .world-card-button,
+    .world-action-button {
+      min-height: 42px;
+      border: 3px solid #19351f;
+      padding: 8px 14px 6px;
+      background: var(--accent);
+      color: #20321f;
+      font: inherit;
+      font-size: 16px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .world-card-button:hover,
+    .world-action-button:hover {
+      background: #ffe994;
+    }
+
+    .world-action-button.secondary {
+      background: #777777;
+      color: #ffffff;
+    }
+
+    .world-select-actions {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      margin-top: 4px;
+    }
+
+    #world-select-notice {
+      min-height: 22px;
+      color: #ffd5c7;
+      font-size: 14px;
+      text-align: center;
+    }
+
     .menu-card {
       position: relative;
       z-index: 2;
@@ -1033,6 +1143,19 @@
     }
 
     @media (max-width: 600px) {
+      .world-select-card {
+        padding: 22px 16px;
+      }
+
+      .world-card {
+        align-items: stretch;
+        flex-direction: column;
+      }
+
+      .world-card-button {
+        width: 100%;
+      }
+
       #utility-panel.shop-screen {
         padding: 24px 14px;
       }
@@ -1192,6 +1315,19 @@
       </div>
     </section>
 
+    <section id="world-select" aria-label="选择世界">
+      <div class="world-select-card">
+        <div class="world-select-title">选择世界</div>
+        <div class="world-select-subtitle">进入已有存档，或创建一个新的世界。</div>
+        <div id="world-list"></div>
+        <div class="world-select-actions">
+          <button id="create-world" class="world-action-button" type="button">创建新世界</button>
+          <button id="back-title" class="world-action-button secondary" type="button">返回</button>
+        </div>
+        <div id="world-select-notice" role="status" aria-live="polite"></div>
+      </div>
+    </section>
+
     <section id="loading" aria-live="polite">
       <div class="loading-title">载入世界</div>
       <div class="track"><div id="progress"></div></div>
@@ -1262,6 +1398,11 @@
     const canvas = document.querySelector("#unity-canvas");
     const menu = document.querySelector("#menu");
     const startGame = document.querySelector("#start-game");
+    const worldSelect = document.querySelector("#world-select");
+    const worldList = document.querySelector("#world-list");
+    const createWorld = document.querySelector("#create-world");
+    const backTitle = document.querySelector("#back-title");
+    const worldSelectNotice = document.querySelector("#world-select-notice");
     const pauseMenu = document.querySelector("#pause-menu");
     const resumeGame = document.querySelector("#resume-game");
     const saveExitGame = document.querySelector("#save-exit-game");
@@ -1292,7 +1433,9 @@
     let coinAmount = 100;
     const inventorySlots = Array(27).fill(null);
     const hotbarSlots = Array(9).fill(null);
-    const saveStorageKey = "zhongzhijianzao-save-v1";
+    const saveStoragePrefix = "zhongzhijianzao-save-";
+    const legacySaveStorageKey = "zhongzhijianzao-save-v1";
+    let activeSaveSlot = "world-1";
     const shopInventory = {
       wheat_seed: 0,
       carrot_seed: 0,
@@ -1305,9 +1448,87 @@
     let hotkeyFeedbackTimer;
     let utilityNoticeTimer;
 
+    const worldSlots = [
+      { id: "world-1", label: "世界 1" },
+      { id: "world-2", label: "世界 2" },
+      { id: "world-3", label: "世界 3" }
+    ];
+
+    function saveStorageKeyFor(slotId) {
+      return saveStoragePrefix + slotId;
+    }
+
+    function readWorldSave(slotId) {
+      try {
+        return localStorage.getItem(saveStorageKeyFor(slotId));
+      } catch (error) {
+        return null;
+      }
+    }
+
+    function migrateLegacySave() {
+      try {
+        if (!localStorage.getItem(saveStorageKeyFor("world-1")) &&
+            localStorage.getItem(legacySaveStorageKey)) {
+          localStorage.setItem(
+            saveStorageKeyFor("world-1"),
+            localStorage.getItem(legacySaveStorageKey));
+        }
+      } catch (error) {
+        // 浏览器禁用本地存储时，仍允许创建临时世界。
+      }
+    }
+
+    function showWorldSelectNotice(message) {
+      worldSelectNotice.textContent = message || "";
+    }
+
+    function refreshWorldList() {
+      migrateLegacySave();
+      worldList.innerHTML = worldSlots.map(slot => {
+        const hasSave = Boolean(readWorldSave(slot.id));
+        return "<div class=\"world-card " + (hasSave ? "has-save" : "empty") + "\">" +
+          "<div class=\"world-card-copy\"><strong>" + slot.label + "</strong>" +
+          "<small>" + (hasSave ? "已有存档，可以继续游戏" : "空存档位置") + "</small></div>" +
+          "<button class=\"world-card-button\" type=\"button\" data-world-slot=\"" + slot.id +
+          " data-world-action=\"" + (hasSave ? "enter" : "create") + "\">" +
+          (hasSave ? "进入世界" : "创建世界") + "</button></div>";
+      }).join("");
+
+      worldList.querySelectorAll("[data-world-slot]").forEach(button => {
+        button.addEventListener("click", () => {
+          startWorld(
+            button.dataset.worldSlot,
+            button.dataset.worldAction === "create");
+        });
+      });
+    }
+
+    function startWorld(slotId, resetSave) {
+      activeSaveSlot = slotId;
+      if (resetSave) {
+        try {
+          localStorage.removeItem(saveStorageKeyFor(slotId));
+        } catch (error) {
+          // Ignore storage errors and start a temporary world.
+        }
+      }
+      showWorldSelectNotice("");
+      worldSelect.classList.remove("visible");
+      menu.classList.add("hidden");
+      bootGame();
+    }
+
+    function showWorldSelect() {
+      refreshWorldList();
+      showWorldSelectNotice("");
+      menu.classList.add("hidden");
+      worldSelect.classList.add("visible");
+    }
+
     window.SaveGameData = json => {
       try {
-        localStorage.setItem(saveStorageKey, json || "");
+        localStorage.setItem(saveStorageKeyFor(activeSaveSlot), json || "");
       } catch (error) {
         // 浏览器禁用本地存储时，游戏仍可继续运行。
       }
@@ -1315,7 +1536,8 @@
 
     window.LoadGameData = () => {
       try {
-        return localStorage.getItem(saveStorageKey) || "";
+        migrateLegacySave();
+        return localStorage.getItem(saveStorageKeyFor(activeSaveSlot)) || "";
       } catch (error) {
         return "";
       }
@@ -1572,6 +1794,19 @@
     sellToggle.addEventListener("click", () => openUtility("sell"));
     resumeGame.addEventListener("click", closePauseMenu);
     saveExitGame.addEventListener("click", saveAndExitGame);
+    createWorld.addEventListener("click", () => {
+      const emptySlot = worldSlots.find(slot => !readWorldSave(slot.id));
+      if (!emptySlot) {
+        showWorldSelectNotice("存档位置已满，请进入已有世界。");
+        return;
+      }
+      startWorld(emptySlot.id, true);
+    });
+    backTitle.addEventListener("click", () => {
+      worldSelect.classList.remove("visible");
+      menu.classList.remove("hidden");
+      showWorldSelectNotice("");
+    });
 
     document.querySelectorAll("[data-item]").forEach(button => {
       button.addEventListener("click", () => {
@@ -1617,7 +1852,7 @@
 
     // 每次发布都更换版本号，避免 UnityCache/浏览器继续使用旧的同名构建文件。
     const buildUrl = "Build";
-    const buildVersion = "20260724-farm15";
+    const buildVersion = "20260724-farm16";
     const assetUrl = file => buildUrl + "/" + file + "?v=" + buildVersion;
     const loaderUrl = assetUrl("{{{ LOADER_FILENAME }}}");
     const config = {
@@ -1678,8 +1913,7 @@
     }
 
     startGame.addEventListener("click", () => {
-      menu.classList.add("hidden");
-      bootGame();
+      showWorldSelect();
     });
 
     window.addEventListener("beforeunload", () => {
