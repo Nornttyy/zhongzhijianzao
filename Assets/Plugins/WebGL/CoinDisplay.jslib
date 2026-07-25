@@ -23,5 +23,17 @@ mergeInto(LibraryManager.library, {
     if (typeof window.notifyHarvest === "function") {
       window.notifyHarvest(UTF8ToString(itemIdPtr), coins);
     }
+  },
+  SaveGameData: function (jsonPtr) {
+    if (typeof window.SaveGameData === "function") {
+      window.SaveGameData(UTF8ToString(jsonPtr));
+    }
+  },
+  LoadGameData: function () {
+    var json = "";
+    if (typeof window.LoadGameData === "function") {
+      json = window.LoadGameData() || "";
+    }
+    return stringToNewUTF8(json);
   }
 });
