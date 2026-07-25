@@ -261,6 +261,11 @@ namespace DoNotOpen.Prototype
             }
         }
 
+        public void SaveGameNow()
+        {
+            SaveCurrentGame();
+        }
+
         private static Camera BuildCamera()
         {
             Camera camera = Camera.main;
