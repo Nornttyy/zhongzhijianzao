@@ -35,5 +35,11 @@ mergeInto(LibraryManager.library, {
       json = window.LoadGameData() || "";
     }
     return stringToNewUTF8(json);
+  },
+  GetSelectedWorldSeed: function () {
+    if (typeof window.GetSelectedWorldSeed === "function") {
+      return window.GetSelectedWorldSeed() | 0;
+    }
+    return 271828;
   }
 });
