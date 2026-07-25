@@ -67,7 +67,10 @@ namespace DoNotOpen.Prototype
                 itemId == "hoe")
             {
                 selectedItemId = itemId;
+                return;
             }
+
+            selectedItemId = string.Empty;
         }
 
         private void Update()
