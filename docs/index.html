@@ -707,6 +707,60 @@
       margin: -8px auto 20px;
     }
 
+    #pause-menu {
+      position: absolute;
+      inset: 0;
+      z-index: 30;
+      display: none;
+      place-items: center;
+      background: rgba(13, 22, 15, 0.78);
+    }
+
+    #pause-menu.visible {
+      display: grid;
+    }
+
+    .pause-card {
+      display: grid;
+      width: min(420px, calc(100vw - 40px));
+      gap: 14px;
+      border: 5px solid #b0a77c;
+      padding: 28px 30px 30px;
+      background: #3c3c3c;
+      box-shadow: inset 0 0 0 4px #191919, 0 8px 0 #151515;
+      text-align: center;
+    }
+
+    .pause-title {
+      margin: 0 0 8px;
+      color: #fff2a8;
+      font-size: 30px;
+    }
+
+    .pause-button {
+      min-height: 50px;
+      border: 3px solid #19351f;
+      padding: 10px 16px 8px;
+      background: var(--accent);
+      color: #20321f;
+      font: inherit;
+      font-size: 19px;
+      cursor: pointer;
+    }
+
+    .pause-button:hover {
+      background: #ffe994;
+    }
+
+    .pause-button.secondary {
+      background: #9ed36a;
+    }
+
+    .pause-button:disabled {
+      cursor: wait;
+      opacity: 0.65;
+    }
+
     #utility-title {
       color: var(--ink);
       font-size: 32px;
@@ -1193,6 +1247,13 @@
         </div>
       </div>
     </section>
+    <section id="pause-menu" aria-label="游戏菜单">
+      <div class="pause-card">
+        <h2 class="pause-title">游戏菜单</h2>
+        <button id="resume-game" class="pause-button" type="button">继续游戏</button>
+        <button id="save-exit-game" class="pause-button secondary" type="button">保存并退出游戏</button>
+      </div>
+    </section>
     <div id="banner" role="alert"></div>
   </main>
 
@@ -1201,6 +1262,9 @@
     const canvas = document.querySelector("#unity-canvas");
     const menu = document.querySelector("#menu");
     const startGame = document.querySelector("#start-game");
+    const pauseMenu = document.querySelector("#pause-menu");
+    const resumeGame = document.querySelector("#resume-game");
+    const saveExitGame = document.querySelector("#save-exit-game");
     const loading = document.querySelector("#loading");
     const progress = document.querySelector("#progress");
     const status = document.querySelector("#status");
@@ -1223,6 +1287,7 @@
     const shopView = document.querySelector("#shop-view");
     const sellView = document.querySelector("#sell-view");
     let utilityMode = null;
+    let gamePaused = false;
     let selectedHotbarIndex = 0;
     let coinAmount = 100;
     const inventorySlots = Array(27).fill(null);
@@ -1479,9 +1544,34 @@
       }
     }
 
+    function openPauseMenu() {
+      if (!gameReady || utilityMode || gamePaused) return;
+      gamePaused = true;
+      pauseMenu.classList.add("visible");
+      setGameInputLocked(true);
+    }
+
+    function closePauseMenu() {
+      if (!gamePaused) return;
+      gamePaused = false;
+      pauseMenu.classList.remove("visible");
+      setGameInputLocked(false);
+    }
+
+    function saveAndExitGame() {
+      saveExitGame.disabled = true;
+      saveExitGame.textContent = "正在保存…";
+      if (unityInstance) {
+        unityInstance.SendMessage("Prototype Bootstrap", "SaveGameNow");
+      }
+      window.setTimeout(() => window.location.reload(), 120);
+    }
+
     utilityClose.addEventListener("click", closeUtility);
     shopToggle.addEventListener("click", () => openUtility("shop"));
     sellToggle.addEventListener("click", () => openUtility("sell"));
+    resumeGame.addEventListener("click", closePauseMenu);
+    saveExitGame.addEventListener("click", saveAndExitGame);
 
     document.querySelectorAll("[data-item]").forEach(button => {
       button.addEventListener("click", () => {
@@ -1527,7 +1617,7 @@
 
     // 每次发布都更换版本号，避免 UnityCache/浏览器继续使用旧的同名构建文件。
     const buildUrl = "Build";
-    const buildVersion = "20260724-farm14";
+    const buildVersion = "20260724-farm15";
     const assetUrl = file => buildUrl + "/" + file + "?v=" + buildVersion;
     const loaderUrl = assetUrl("docs.loader.js");
     const config = {
@@ -1592,6 +1682,12 @@
       bootGame();
     });
 
+    window.addEventListener("beforeunload", () => {
+      if (unityInstance) {
+        unityInstance.SendMessage("Prototype Bootstrap", "SaveGameNow");
+      }
+    });
+
     document.addEventListener("keydown", event => {
       if (!menu.classList.contains("hidden")) return;
       if (!gameReady) {
@@ -1599,6 +1695,11 @@
         return;
       }
       const key = event.key.toLowerCase();
+      if (gamePaused) {
+        event.preventDefault();
+        if (event.key === "Escape") closePauseMenu();
+        return;
+      }
       if (utilityMode && key !== "e" && event.key !== "Escape") {
         event.preventDefault();
         event.stopImmediatePropagation();
@@ -1615,7 +1716,7 @@
       }
       if (event.key === "Escape") {
         event.preventDefault();
-        closeUtility();
+        utilityMode ? closeUtility() : openPauseMenu();
       }
     }, true);
 
