@@ -1081,6 +1081,13 @@
     .sprite-r1-c5 { background-position: 71.4286% 33.3333% !important; }
     .sprite-r2-c0 { background-position: 0% 66.6667% !important; }
     .sprite-r2-c1 { background-position: 14.2857% 66.6667% !important; }
+    .sprite-r3-c0 { background-position: 0% 100% !important; }
+    .sprite-r3-c1 { background-position: 14.2857% 100% !important; }
+    .sprite-r3-c2 { background-position: 28.5714% 100% !important; }
+    .sprite-r3-c3 { background-position: 42.8571% 100% !important; }
+    .sprite-r3-c4 { background-position: 57.1429% 100% !important; }
+    .sprite-r3-c5 { background-position: 71.4286% 100% !important; }
+    .sprite-r3-c6 { background-position: 85.7143% 100% !important; }
 
     .slot-count {
       position: absolute;
@@ -1827,7 +1834,7 @@
         wood: "sprite-r0-c3",
         watering_can: "sprite-r0-c4",
         hoe: "sprite-r0-c5",
-        wood_sword: "sprite-r0-c3",
+        wood_sword: "sprite-r3-c0",
         wheat_crop: "sprite-r2-c0",
         carrot_crop: "sprite-r2-c1"
       };
@@ -2071,7 +2078,7 @@
 
     // 每次发布都更换版本号，避免 UnityCache/浏览器继续使用旧的同名构建文件。
     const buildUrl = "Build";
-    const buildVersion = "20260725-farm21";
+    const buildVersion = "20260725-farm22";
     const assetUrl = file => buildUrl + "/" + file + "?v=" + buildVersion;
     const loaderUrl = assetUrl("docs.loader.js");
     const config = {
