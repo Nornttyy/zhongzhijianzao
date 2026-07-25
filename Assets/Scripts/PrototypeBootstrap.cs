@@ -23,12 +23,13 @@ namespace DoNotOpen.Prototype
         {
             public int x;
             public int y;
+            public bool wet;
         }
 
         [Serializable]
         private sealed class GameSaveData
         {
-            public int version = 1;
+            public int version = 2;
             public int coins;
             public bool hasPlayerPosition;
             public float playerX;
@@ -175,6 +176,11 @@ namespace DoNotOpen.Prototype
                         {
                             world.RestoreTilledTile(
                                 new Vector2Int(savedTile.x, savedTile.y));
+                            if (savedTile.wet)
+                            {
+                                world.RestoreWetTile(
+                                    new Vector2Int(savedTile.x, savedTile.y));
+                            }
                         }
                     }
                 }
@@ -227,7 +233,8 @@ namespace DoNotOpen.Prototype
                 data.tilledTiles.Add(new SavedTileData
                 {
                     x = tile.x,
-                    y = tile.y
+                    y = tile.y,
+                    wet = world.IsWetAt(tile)
                 });
             }
 
