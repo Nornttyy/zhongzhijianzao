@@ -26,6 +26,7 @@ namespace DoNotOpen.Prototype
             "carrot_seed",
             "fertilizer",
             "wood",
+            "watering_can",
             "hoe",
             "wheat_crop",
             "carrot_crop"
@@ -51,11 +52,13 @@ namespace DoNotOpen.Prototype
             itemCounts["carrot_seed"] = 0;
             itemCounts["fertilizer"] = 0;
             itemCounts["wood"] = 0;
+            itemCounts["watering_can"] = 1;
             itemCounts["hoe"] = 1;
             itemCounts["wheat_crop"] = 0;
             itemCounts["carrot_crop"] = 0;
 #if UNITY_WEBGL && !UNITY_EDITOR
             NotifyShopItem("wheat_seed", 10);
+            NotifyShopItem("watering_can", 1);
             NotifyShopItem("hoe", 1);
 #endif
         }
