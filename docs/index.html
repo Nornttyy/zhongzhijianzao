@@ -1534,6 +1534,7 @@
       carrot_seed: 0,
       fertilizer: 0,
       wood: 0,
+      watering_can: 0,
       hoe: 0,
       wheat_crop: 0,
       carrot_crop: 0
@@ -1801,7 +1802,7 @@
       const filled = itemId && count > 0;
       const sprite = itemId ? getItemSprite(itemId) : "";
       const selected = slotType === "hotbar" && slotIndex === selectedHotbarIndex;
-      const countMarkup = filled && itemId !== "hoe"
+      const countMarkup = filled && itemId !== "hoe" && itemId !== "watering_can"
         ? "<span class=\"slot-count\">" + count + "</span>"
         : "";
       return "<div class=\"inventory-slot" + (filled ? " filled" : "") +
@@ -1820,6 +1821,7 @@
         carrot_seed: "sprite-r0-c1",
         fertilizer: "sprite-r0-c2",
         wood: "sprite-r0-c3",
+        watering_can: "sprite-r0-c4",
         hoe: "sprite-r0-c5",
         wheat_crop: "sprite-r2-c0",
         carrot_crop: "sprite-r2-c1"
@@ -2064,7 +2066,7 @@
 
     // 每次发布都更换版本号，避免 UnityCache/浏览器继续使用旧的同名构建文件。
     const buildUrl = "Build";
-    const buildVersion = "20260725-farm18";
+    const buildVersion = "20260725-farm19";
     const assetUrl = file => buildUrl + "/" + file + "?v=" + buildVersion;
     const loaderUrl = assetUrl("docs.loader.js");
     const config = {
