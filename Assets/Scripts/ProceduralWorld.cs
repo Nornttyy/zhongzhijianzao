@@ -200,6 +200,34 @@ namespace DoNotOpen.Prototype
                 return false;
             }
 
+            ApplyTilledTile(tile);
+            return true;
+        }
+
+        public bool RestoreTilledTile(Vector2Int tile)
+        {
+            if (!IsInsideWorld(tile.x, tile.y))
+            {
+                return false;
+            }
+
+            GroundType ground = GetGround(tile.x, tile.y);
+            if (ground != GroundType.Grass && ground != GroundType.Farmland)
+            {
+                return false;
+            }
+
+            ApplyTilledTile(tile);
+            return true;
+        }
+
+        public List<Vector2Int> CaptureTilledTiles()
+        {
+            return new List<Vector2Int>(tilledTiles);
+        }
+
+        private void ApplyTilledTile(Vector2Int tile)
+        {
             tilledTiles.Add(tile);
             Vector2Int chunkCoordinate = new Vector2Int(
                 Mathf.FloorToInt(tile.x / (float)ChunkSize),
@@ -211,8 +239,6 @@ namespace DoNotOpen.Prototype
                 RemoveDecorationAt(chunk, tile);
                 chunk.Mesh.uv = BuildChunkUvs(chunkCoordinate);
             }
-
-            return true;
         }
 
         private static void RemoveDecorationAt(GeneratedWorldChunk chunk, Vector2Int tile)
