@@ -230,6 +230,41 @@
       margin: 6px 0;
     }
 
+    #world-list-view {
+      display: grid;
+      gap: 16px;
+    }
+
+    #world-create-view {
+      display: none;
+      gap: 16px;
+    }
+
+    #world-create-view.visible {
+      display: grid;
+    }
+
+    .world-field {
+      display: grid;
+      gap: 6px;
+      color: #fff2a8;
+      font-size: 16px;
+    }
+
+    .world-field input {
+      border: 3px solid #1b1b1b;
+      padding: 10px;
+      background: #777777;
+      color: #ffffff;
+      font: inherit;
+      font-size: 17px;
+      outline: none;
+    }
+
+    .world-field input:focus {
+      border-color: var(--accent);
+    }
+
     .world-card {
       display: flex;
       align-items: center;
@@ -1317,14 +1352,27 @@
 
     <section id="world-select" aria-label="选择世界">
       <div class="world-select-card">
-        <div class="world-select-title">选择世界</div>
-        <div class="world-select-subtitle">进入已有存档，或创建一个新的世界。</div>
-        <div id="world-list"></div>
-        <div class="world-select-actions">
-          <button id="create-world" class="world-action-button" type="button">创建新世界</button>
-          <button id="back-title" class="world-action-button secondary" type="button">返回</button>
+        <div id="world-list-view">
+          <div class="world-select-title">选择世界</div>
+          <div class="world-select-subtitle">进入已有存档，或创建一个新的世界。</div>
+          <div id="world-list"></div>
+          <div class="world-select-actions">
+            <button id="create-world" class="world-action-button" type="button">创建新世界</button>
+            <button id="back-title" class="world-action-button secondary" type="button">返回</button>
+          </div>
+          <div id="world-select-notice" role="status" aria-live="polite"></div>
         </div>
-        <div id="world-select-notice" role="status" aria-live="polite"></div>
+        <div id="world-create-view">
+          <div class="world-select-title">创建新世界</div>
+          <div class="world-select-subtitle">为这个世界设置名称和种子。</div>
+          <label class="world-field">世界名称<input id="world-name" type="text" maxlength="20" value="新世界"></label>
+          <label class="world-field">世界种子<input id="world-seed" type="text" inputmode="numeric" placeholder="留空则随机生成"></label>
+          <div class="world-select-actions">
+            <button id="confirm-create-world" class="world-action-button" type="button">创建并进入</button>
+            <button id="cancel-create-world" class="world-action-button secondary" type="button">返回</button>
+          </div>
+          <div id="world-create-notice" role="status" aria-live="polite"></div>
+        </div>
       </div>
     </section>
 
@@ -1399,10 +1447,17 @@
     const menu = document.querySelector("#menu");
     const startGame = document.querySelector("#start-game");
     const worldSelect = document.querySelector("#world-select");
+    const worldListView = document.querySelector("#world-list-view");
+    const worldCreateView = document.querySelector("#world-create-view");
     const worldList = document.querySelector("#world-list");
     const createWorld = document.querySelector("#create-world");
     const backTitle = document.querySelector("#back-title");
     const worldSelectNotice = document.querySelector("#world-select-notice");
+    const worldName = document.querySelector("#world-name");
+    const worldSeed = document.querySelector("#world-seed");
+    const confirmCreateWorld = document.querySelector("#confirm-create-world");
+    const cancelCreateWorld = document.querySelector("#cancel-create-world");
+    const worldCreateNotice = document.querySelector("#world-create-notice");
     const pauseMenu = document.querySelector("#pause-menu");
     const resumeGame = document.querySelector("#resume-game");
     const saveExitGame = document.querySelector("#save-exit-game");
@@ -1436,6 +1491,9 @@
     const saveStoragePrefix = "zhongzhijianzao-save-";
     const legacySaveStorageKey = "zhongzhijianzao-save-v1";
     let activeSaveSlot = "world-1";
+    let pendingCreateSlot = null;
+    let selectedWorldSeed = 271828;
+    let selectedWorldName = "世界 1";
     const shopInventory = {
       wheat_seed: 0,
       carrot_seed: 0,
@@ -1458,6 +1516,55 @@
       return saveStoragePrefix + slotId;
     }
 
+    function worldMetaKey(slotId) {
+      return saveStoragePrefix + slotId + "-meta";
+    }
+
+    function readWorldMeta(slotId) {
+      try {
+        const raw = localStorage.getItem(worldMetaKey(slotId));
+        const meta = raw ? JSON.parse(raw) : {};
+        const parsedSeed = Number(meta.seed);
+        return {
+          name: String(meta.name || (worldSlots.find(slot => slot.id === slotId) || {}).label || slotId),
+          seed: Number.isFinite(parsedSeed) && parsedSeed !== 0 ? Math.abs(Math.trunc(parsedSeed)) : 271828
+        };
+      } catch (error) {
+        return { name: String((worldSlots.find(slot => slot.id === slotId) || {}).label || slotId), seed: 271828 };
+      }
+    }
+
+    function saveWorldMeta(slotId, meta) {
+      try {
+        localStorage.setItem(worldMetaKey(slotId), JSON.stringify(meta));
+      } catch (error) {
+        // 浏览器禁用本地存储时，仍允许创建临时世界。
+      }
+    }
+
+    function generateWorldSeed() {
+      return Math.floor(Math.random() * 2147483646) + 1;
+    }
+
+    function parseWorldSeed(raw) {
+      const trimmed = String(raw || "").trim();
+      if (!trimmed) return generateWorldSeed();
+      if (!/^[+-]?\d+$/.test(trimmed)) return null;
+      const parsed = Number.parseInt(trimmed, 10);
+      if (!Number.isFinite(parsed) || parsed === 0) return null;
+      return Math.abs(parsed) % 2147483647 || 1;
+    }
+
+    function escapeHtml(value) {
+      return String(value).replace(/[&<>"']/g, character => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        "\"": "&quot;",
+        "'": "&#39;"
+      }[character]));
+    }
+
     function readWorldSave(slotId) {
       try {
         return localStorage.getItem(saveStorageKeyFor(slotId));
@@ -1473,6 +1580,7 @@
           localStorage.setItem(
             saveStorageKeyFor("world-1"),
             localStorage.getItem(legacySaveStorageKey));
+          saveWorldMeta("world-1", { name: "世界 1", seed: 271828 });
         }
       } catch (error) {
         // 浏览器禁用本地存储时，仍允许创建临时世界。
@@ -1487,44 +1595,77 @@
       migrateLegacySave();
       worldList.innerHTML = worldSlots.map(slot => {
         const hasSave = Boolean(readWorldSave(slot.id));
+        const meta = readWorldMeta(slot.id);
         return "<div class=\"world-card " + (hasSave ? "has-save" : "empty") + "\">" +
-          "<div class=\"world-card-copy\"><strong>" + slot.label + "</strong>" +
-          "<small>" + (hasSave ? "已有存档，可以继续游戏" : "空存档位置") + "</small></div>" +
+          "<div class=\"world-card-copy\"><strong>" + escapeHtml(hasSave ? meta.name : slot.label) + "</strong>" +
+          "<small>" + (hasSave ? "已有存档 · 种子 " + meta.seed : "空存档位置") + "</small></div>" +
           "<button class=\"world-card-button\" type=\"button\" data-world-slot=\"" + slot.id +
-          " data-world-action=\"" + (hasSave ? "enter" : "create") + "\">" +
+          "\" data-world-action=\"" + (hasSave ? "enter" : "create") + "\">" +
           (hasSave ? "进入世界" : "创建世界") + "</button></div>";
       }).join("");
 
       worldList.querySelectorAll("[data-world-slot]").forEach(button => {
         button.addEventListener("click", () => {
-          startWorld(
-            button.dataset.worldSlot,
-            button.dataset.worldAction === "create");
+          if (button.dataset.worldAction === "create") {
+            showCreateWorld(button.dataset.worldSlot);
+            return;
+          }
+          startWorld(button.dataset.worldSlot, false);
         });
       });
     }
 
-    function startWorld(slotId, resetSave) {
+    function showCreateWorld(slotId) {
+      const emptySlot = slotId ? worldSlots.find(slot => slot.id === slotId && !readWorldSave(slot.id)) : worldSlots.find(slot => !readWorldSave(slot.id));
+      if (!emptySlot) {
+        showWorldSelectNotice("存档位置已满，请进入已有世界。");
+        return;
+      }
+      pendingCreateSlot = emptySlot.id;
+      worldName.value = "新世界";
+      worldSeed.value = "";
+      worldCreateNotice.textContent = "";
+      worldListView.style.display = "none";
+      worldCreateView.classList.add("visible");
+      worldName.focus();
+    }
+
+    function hideCreateWorld() {
+      pendingCreateSlot = null;
+      worldCreateView.classList.remove("visible");
+      worldListView.style.display = "grid";
+      worldCreateNotice.textContent = "";
+    }
+
+    function startWorld(slotId, resetSave, metadata) {
+      const meta = metadata || readWorldMeta(slotId);
       activeSaveSlot = slotId;
+      selectedWorldSeed = meta.seed;
+      selectedWorldName = meta.name;
       if (resetSave) {
         try {
           localStorage.removeItem(saveStorageKeyFor(slotId));
         } catch (error) {
           // Ignore storage errors and start a temporary world.
         }
+        saveWorldMeta(slotId, meta);
       }
       showWorldSelectNotice("");
+      hideCreateWorld();
       worldSelect.classList.remove("visible");
       menu.classList.add("hidden");
       bootGame();
     }
 
     function showWorldSelect() {
+      hideCreateWorld();
       refreshWorldList();
       showWorldSelectNotice("");
       menu.classList.add("hidden");
       worldSelect.classList.add("visible");
     }
+
+    window.GetSelectedWorldSeed = () => selectedWorldSeed;
 
     window.SaveGameData = json => {
       try {
@@ -1794,15 +1935,29 @@
     sellToggle.addEventListener("click", () => openUtility("sell"));
     resumeGame.addEventListener("click", closePauseMenu);
     saveExitGame.addEventListener("click", saveAndExitGame);
-    createWorld.addEventListener("click", () => {
-      const emptySlot = worldSlots.find(slot => !readWorldSave(slot.id));
-      if (!emptySlot) {
-        showWorldSelectNotice("存档位置已满，请进入已有世界。");
+    createWorld.addEventListener("click", () => showCreateWorld());
+    cancelCreateWorld.addEventListener("click", hideCreateWorld);
+    confirmCreateWorld.addEventListener("click", () => {
+      if (!pendingCreateSlot) {
+        showCreateWorld();
         return;
       }
-      startWorld(emptySlot.id, true);
+      const name = (worldName.value || "新世界").trim().slice(0, 20) || "新世界";
+      const seed = parseWorldSeed(worldSeed.value);
+      if (seed === null) {
+        worldCreateNotice.textContent = "种子只能填写数字，或留空随机生成。";
+        worldSeed.focus();
+        return;
+      }
+      const metadata = { name, seed };
+      saveWorldMeta(pendingCreateSlot, metadata);
+      startWorld(pendingCreateSlot, true, metadata);
     });
     backTitle.addEventListener("click", () => {
+      if (worldCreateView.classList.contains("visible")) {
+        hideCreateWorld();
+        return;
+      }
       worldSelect.classList.remove("visible");
       menu.classList.remove("hidden");
       showWorldSelectNotice("");
@@ -1852,7 +2007,7 @@
 
     // 每次发布都更换版本号，避免 UnityCache/浏览器继续使用旧的同名构建文件。
     const buildUrl = "Build";
-    const buildVersion = "20260724-farm16";
+    const buildVersion = "20260725-farm17";
     const assetUrl = file => buildUrl + "/" + file + "?v=" + buildVersion;
     const loaderUrl = assetUrl("docs.loader.js");
     const config = {
