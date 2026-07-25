@@ -13,6 +13,24 @@ namespace DoNotOpen.Prototype
     /// </summary>
     public sealed class ShopSystem : MonoBehaviour
     {
+        [System.Serializable]
+        public sealed class ItemSaveData
+        {
+            public string id;
+            public int count;
+        }
+
+        private static readonly string[] SaveItemIds =
+        {
+            "wheat_seed",
+            "carrot_seed",
+            "fertilizer",
+            "wood",
+            "hoe",
+            "wheat_crop",
+            "carrot_crop"
+        };
+
         private readonly Dictionary<string, int> itemCounts =
             new Dictionary<string, int>();
 
@@ -71,6 +89,46 @@ namespace DoNotOpen.Prototype
             NotifyShopItem(itemId, count - 1);
 #endif
             return true;
+        }
+
+        public List<ItemSaveData> CaptureItems()
+        {
+            List<ItemSaveData> savedItems = new List<ItemSaveData>();
+            foreach (string itemId in SaveItemIds)
+            {
+                savedItems.Add(new ItemSaveData
+                {
+                    id = itemId,
+                    count = GetCount(itemId)
+                });
+            }
+
+            return savedItems;
+        }
+
+        public void RestoreItems(List<ItemSaveData> savedItems)
+        {
+            if (savedItems == null)
+            {
+                return;
+            }
+
+            foreach (ItemSaveData savedItem in savedItems)
+            {
+                if (savedItem == null || string.IsNullOrEmpty(savedItem.id))
+                {
+                    continue;
+                }
+
+                itemCounts[savedItem.id] = Mathf.Max(0, savedItem.count);
+            }
+
+#if UNITY_WEBGL && !UNITY_EDITOR
+            foreach (string itemId in SaveItemIds)
+            {
+                NotifyShopItem(itemId, GetCount(itemId));
+            }
+#endif
         }
 
         public void AddHarvest(string seedId)
