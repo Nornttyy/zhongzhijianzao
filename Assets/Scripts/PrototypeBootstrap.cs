@@ -105,7 +105,7 @@ namespace DoNotOpen.Prototype
             farming.Initialize(player, world, shop, farmingTexture);
 
             weapon = gameObject.AddComponent<WeaponSystem>();
-            weapon.Initialize(player, world, shop);
+            weapon.Initialize(player, world, shop, farmingTexture);
 
             CameraFollow follow = camera.gameObject.AddComponent<CameraFollow>();
             follow.Initialize(player.transform, world.MapBounds);
