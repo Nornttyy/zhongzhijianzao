@@ -60,6 +60,7 @@ namespace DoNotOpen.Prototype
             new Dictionary<Vector2Int, GeneratedWorldChunk>();
 
         private readonly HashSet<Vector2Int> tilledTiles = new HashSet<Vector2Int>();
+        private readonly HashSet<Vector2Int> wetTiles = new HashSet<Vector2Int>();
 
         private readonly List<Vector2Int> removalBuffer = new List<Vector2Int>();
         private readonly List<CaveEntranceMarker> loadedCaveEntrances =
@@ -197,6 +198,11 @@ namespace DoNotOpen.Prototype
                    GetGround(tile.x, tile.y) == GroundType.Farmland;
         }
 
+        public bool IsWetAt(Vector2Int tile)
+        {
+            return wetTiles.Contains(tile) && IsFarmlandAt(tile);
+        }
+
         public bool TryTillAt(Vector2Int tile)
         {
             if (!IsInsideWorld(tile.x, tile.y) ||
@@ -205,8 +211,32 @@ namespace DoNotOpen.Prototype
                 return false;
             }
 
+            wetTiles.Remove(tile);
             ApplyTilledTile(tile);
             return true;
+        }
+
+        public bool TryWaterAt(Vector2Int tile)
+        {
+            if (!IsFarmlandAt(tile))
+            {
+                return false;
+            }
+
+            if (wetTiles.Add(tile))
+            {
+                RefreshTileUvs(tile);
+            }
+
+            return true;
+        }
+
+        public void DryFarmlandAt(Vector2Int tile)
+        {
+            if (wetTiles.Remove(tile))
+            {
+                RefreshTileUvs(tile);
+            }
         }
 
         public bool RestoreTilledTile(Vector2Int tile)
@@ -226,6 +256,18 @@ namespace DoNotOpen.Prototype
             return true;
         }
 
+        public bool RestoreWetTile(Vector2Int tile)
+        {
+            if (!IsFarmlandAt(tile))
+            {
+                return false;
+            }
+
+            wetTiles.Add(tile);
+            RefreshTileUvs(tile);
+            return true;
+        }
+
         public List<Vector2Int> CaptureTilledTiles()
         {
             return new List<Vector2Int>(tilledTiles);
@@ -234,6 +276,11 @@ namespace DoNotOpen.Prototype
         private void ApplyTilledTile(Vector2Int tile)
         {
             tilledTiles.Add(tile);
+            RefreshTileUvs(tile, true);
+        }
+
+        private void RefreshTileUvs(Vector2Int tile, bool removeDecoration = false)
+        {
             Vector2Int chunkCoordinate = new Vector2Int(
                 Mathf.FloorToInt(tile.x / (float)ChunkSize),
                 Mathf.FloorToInt(tile.y / (float)ChunkSize));
@@ -241,7 +288,10 @@ namespace DoNotOpen.Prototype
                 chunk != null &&
                 chunk.Mesh != null)
             {
-                RemoveDecorationAt(chunk, tile);
+                if (removeDecoration)
+                {
+                    RemoveDecorationAt(chunk, tile);
+                }
                 chunk.Mesh.uv = BuildChunkUvs(chunkCoordinate);
             }
         }
@@ -529,8 +579,10 @@ namespace DoNotOpen.Prototype
                 case GroundType.Sand:
                     return new Vector2Int(0, 2);
                 case GroundType.Farmland:
-                    // 棕色耕地使用素材表第一行的耕地格，不改变草地颜色。
-                    return new Vector2Int(2, 0);
+                    // 第一行第 3 格是干耕地，第 4 格是浇水后的湿润耕地。
+                    return wetTiles.Contains(new Vector2Int(worldX, worldY))
+                        ? new Vector2Int(3, 0)
+                        : new Vector2Int(2, 0);
                 default:
                     // 两种草地颜色相同，只用不同斑点位置减少重复感。
                     return Hash01(worldX, worldY, Seed + 919) < 0.5f
