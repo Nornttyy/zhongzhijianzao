@@ -1450,6 +1450,9 @@
           <button class="shop-button" data-item="wood" data-price="15" data-label="木材">
             <span class="shop-icon sprite-r0-c3"></span><span class="shop-copy"><strong>木材</strong><small>建造系统的基础材料 · <span class="price"><span class="coin-sprite coin-small"></span>15</span></small></span>
           </button>
+          <button class="shop-button" data-item="wood_sword" data-price="30" data-label="木剑">
+            <span class="shop-icon sprite-r0-c3"></span><span class="shop-copy"><strong>木剑</strong><small>右键挥砍 · <span class="price"><span class="coin-sprite coin-small"></span>30</span></small></span>
+          </button>
         </div>
       </div>
       <div id="sell-view">
@@ -1536,6 +1539,7 @@
       wood: 0,
       watering_can: 0,
       hoe: 0,
+      wood_sword: 0,
       wheat_crop: 0,
       carrot_crop: 0
     };
@@ -1823,6 +1827,7 @@
         wood: "sprite-r0-c3",
         watering_can: "sprite-r0-c4",
         hoe: "sprite-r0-c5",
+        wood_sword: "sprite-r0-c3",
         wheat_crop: "sprite-r2-c0",
         carrot_crop: "sprite-r2-c1"
       };
@@ -2066,7 +2071,7 @@
 
     // 每次发布都更换版本号，避免 UnityCache/浏览器继续使用旧的同名构建文件。
     const buildUrl = "Build";
-    const buildVersion = "20260725-farm20";
+    const buildVersion = "20260725-farm21";
     const assetUrl = file => buildUrl + "/" + file + "?v=" + buildVersion;
     const loaderUrl = assetUrl("{{{ LOADER_FILENAME }}}");
     const config = {
