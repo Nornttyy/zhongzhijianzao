@@ -47,6 +47,9 @@ namespace DoNotOpen.Prototype
 
         [DllImport("__Internal")]
         private static extern string LoadGameData();
+
+        [DllImport("__Internal")]
+        private static extern int GetSelectedWorldSeed();
 #endif
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -83,6 +86,9 @@ namespace DoNotOpen.Prototype
             player = BuildPlayer(playerTexture);
 
             world = gameObject.AddComponent<ProceduralWorld>();
+#if UNITY_WEBGL && !UNITY_EDITOR
+            world.SetSeed(GetSelectedWorldSeed());
+#endif
             world.Initialize(worldTexture, caveEntranceTexture, player);
             player.World = world;
 
