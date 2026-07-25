@@ -51,6 +51,11 @@ namespace DoNotOpen.Prototype
         public int Seed { get; private set; } = 271828;
         public Bounds MapBounds { get; private set; }
 
+        public void SetSeed(int seed)
+        {
+            Seed = seed == 0 ? 271828 : seed;
+        }
+
         private readonly Dictionary<Vector2Int, GeneratedWorldChunk> loadedChunks =
             new Dictionary<Vector2Int, GeneratedWorldChunk>();
 
