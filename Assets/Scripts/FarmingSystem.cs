@@ -10,6 +10,15 @@ namespace DoNotOpen.Prototype
     /// </summary>
     public sealed class FarmingSystem : MonoBehaviour
     {
+        [System.Serializable]
+        public sealed class CropSaveData
+        {
+            public int x;
+            public int y;
+            public string seedId;
+            public float elapsed;
+        }
+
         private const float InteractionDistance = 2.45f;
         private const float GrowthStageDuration = 7f;
         private const int MatureStage = 2;
@@ -125,8 +134,63 @@ namespace DoNotOpen.Prototype
                 return;
             }
 
+            CreateCrop(tile, selectedItemId, 0f, stages);
+            shop.ShowFarmingFeedback(selectedItemId == "carrot_seed" ? "胡萝卜已播种" : "小麦已播种");
+        }
+
+        public List<CropSaveData> CaptureCrops()
+        {
+            List<CropSaveData> savedCrops = new List<CropSaveData>();
+            foreach (KeyValuePair<Vector2Int, CropPlot> entry in plots)
+            {
+                CropPlot plot = entry.Value;
+                savedCrops.Add(new CropSaveData
+                {
+                    x = entry.Key.x,
+                    y = entry.Key.y,
+                    seedId = plot.SeedId,
+                    elapsed = Mathf.Max(0f, Time.time - plot.PlantedAt)
+                });
+            }
+
+            return savedCrops;
+        }
+
+        public void RestoreCrop(CropSaveData savedCrop)
+        {
+            if (savedCrop == null || string.IsNullOrEmpty(savedCrop.seedId))
+            {
+                return;
+            }
+
+            Vector2Int tile = new Vector2Int(savedCrop.x, savedCrop.y);
+            if (!world.IsFarmlandAt(tile) || plots.ContainsKey(tile))
+            {
+                return;
+            }
+
+            Sprite[] stages = savedCrop.seedId == "carrot_seed" ? carrotStages : wheatStages;
+            if (stages == null || stages.Length == 0)
+            {
+                return;
+            }
+
+            CreateCrop(tile, savedCrop.seedId, Mathf.Max(0f, savedCrop.elapsed), stages);
+        }
+
+        public void RefreshGrowth()
+        {
+            UpdateGrowth();
+        }
+
+        private void CreateCrop(
+            Vector2Int tile,
+            string seedId,
+            float elapsed,
+            Sprite[] stages)
+        {
             GameObject cropObject = new GameObject(
-                (selectedItemId == "carrot_seed" ? "Carrot" : "Wheat") + " Crop " + tile);
+                (seedId == "carrot_seed" ? "Carrot" : "Wheat") + " Crop " + tile);
             cropObject.transform.SetParent(transform, false);
             // The crop sprites are rooted at their bottom edge, so place that
             // edge on the bottom of the 1×1 farmland tile.
@@ -137,12 +201,11 @@ namespace DoNotOpen.Prototype
 
             plots[tile] = new CropPlot
             {
-                SeedId = selectedItemId,
-                PlantedAt = Time.time,
+                SeedId = seedId,
+                PlantedAt = Time.time - Mathf.Max(0f, elapsed),
                 Stage = 0,
                 Renderer = renderer
             };
-            shop.ShowFarmingFeedback(selectedItemId == "carrot_seed" ? "胡萝卜已播种" : "小麦已播种");
         }
 
         private static bool IsWithinInteractionDistance(Vector2 playerPosition, Vector2Int tile)
