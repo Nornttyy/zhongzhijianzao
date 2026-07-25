@@ -512,6 +512,12 @@
       display: block;
     }
 
+    /* 操作反馈改为不显示，避免中上方出现黄色提示文字。 */
+    #hotkey-feedback,
+    #hotkey-feedback.visible {
+      display: none !important;
+    }
+
     #utility-panel {
       position: absolute;
       top: 50%;
@@ -1427,7 +1433,7 @@
 
     // 每次发布都更换版本号，避免 UnityCache/浏览器继续使用旧的同名构建文件。
     const buildUrl = "Build";
-    const buildVersion = "20260724-farm10";
+    const buildVersion = "20260724-farm11";
     const assetUrl = file => buildUrl + "/" + file + "?v=" + buildVersion;
     const loaderUrl = assetUrl("docs.loader.js");
     const config = {
