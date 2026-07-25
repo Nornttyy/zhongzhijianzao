@@ -16,6 +16,7 @@ namespace DoNotOpen.Prototype
         private TopDownPlayer player;
         private ProceduralWorld world;
         private ShopSystem shop;
+        private Texture2D itemSheet;
         private Sprite swordSprite;
         private Texture2D swordTexture;
         private string selectedWeaponId = string.Empty;
@@ -24,12 +25,14 @@ namespace DoNotOpen.Prototype
         public void Initialize(
             TopDownPlayer controlledPlayer,
             ProceduralWorld generatedWorld,
-            ShopSystem itemShop)
+            ShopSystem itemShop,
+            Texture2D itemTexture)
         {
             player = controlledPlayer;
             world = generatedWorld;
             shop = itemShop;
-            swordSprite = CreateSwordSprite();
+            itemSheet = itemTexture;
+            swordSprite = CreateSwordSprite(itemSheet);
         }
 
         public void SelectHotbarItem(string itemId)
@@ -115,8 +118,21 @@ namespace DoNotOpen.Prototype
             }
         }
 
-        private Sprite CreateSwordSprite()
+        private Sprite CreateSwordSprite(Texture2D texture)
         {
+            if (texture != null && texture.width >= 12 && texture.height >= 48)
+            {
+                texture.filterMode = FilterMode.Point;
+                texture.wrapMode = TextureWrapMode.Clamp;
+                Sprite drawnSprite = Sprite.Create(
+                    texture,
+                    new Rect(0f, 0f, 12f, 12f),
+                    new Vector2(0.5f, 0.12f),
+                    12f);
+                drawnSprite.name = "Wooden Sword Pixel Sprite";
+                return drawnSprite;
+            }
+
             swordTexture = new Texture2D(12, 12, TextureFormat.RGBA32, false)
             {
                 name = "Generated Wooden Sword Texture",
