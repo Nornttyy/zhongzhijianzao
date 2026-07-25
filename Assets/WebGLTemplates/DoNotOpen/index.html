@@ -230,6 +230,18 @@
       margin: 6px 0;
     }
 
+    #world-empty-notice {
+      display: none;
+      min-height: 22px;
+      color: #d0d0d0;
+      font-size: 15px;
+      text-align: center;
+    }
+
+    #world-empty-notice.visible {
+      display: block;
+    }
+
     #world-list-view {
       display: grid;
       gap: 16px;
@@ -296,6 +308,12 @@
       font-size: 13px;
     }
 
+    .world-card-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
     .world-card-button,
     .world-action-button {
       min-height: 42px;
@@ -312,6 +330,16 @@
     .world-card-button:hover,
     .world-action-button:hover {
       background: #ffe994;
+    }
+
+    .world-card-button.delete {
+      border-color: #401d1d;
+      background: #9b5c5c;
+      color: #ffffff;
+    }
+
+    .world-card-button.delete:hover {
+      background: #c97970;
     }
 
     .world-action-button.secondary {
@@ -1191,6 +1219,11 @@
         width: 100%;
       }
 
+      .world-card-actions {
+        width: 100%;
+        flex-direction: column;
+      }
+
       #utility-panel.shop-screen {
         padding: 24px 14px;
       }
@@ -1356,6 +1389,7 @@
           <div class="world-select-title">选择世界</div>
           <div class="world-select-subtitle">进入已有存档，或创建一个新的世界。</div>
           <div id="world-list"></div>
+          <div id="world-empty-notice" role="status" aria-live="polite">暂无存档，请创建一个新世界。</div>
           <div class="world-select-actions">
             <button id="create-world" class="world-action-button" type="button">创建新世界</button>
             <button id="back-title" class="world-action-button secondary" type="button">返回</button>
@@ -1450,6 +1484,7 @@
     const worldListView = document.querySelector("#world-list-view");
     const worldCreateView = document.querySelector("#world-create-view");
     const worldList = document.querySelector("#world-list");
+    const worldEmptyNotice = document.querySelector("#world-empty-notice");
     const createWorld = document.querySelector("#create-world");
     const backTitle = document.querySelector("#back-title");
     const worldSelectNotice = document.querySelector("#world-select-notice");
@@ -1593,26 +1628,48 @@
 
     function refreshWorldList() {
       migrateLegacySave();
-      worldList.innerHTML = worldSlots.map(slot => {
-        const hasSave = Boolean(readWorldSave(slot.id));
+      const savedSlots = worldSlots.filter(slot => Boolean(readWorldSave(slot.id)));
+      worldEmptyNotice.classList.toggle("visible", savedSlots.length === 0);
+      worldList.innerHTML = savedSlots.map(slot => {
         const meta = readWorldMeta(slot.id);
-        return "<div class=\"world-card " + (hasSave ? "has-save" : "empty") + "\">" +
-          "<div class=\"world-card-copy\"><strong>" + escapeHtml(hasSave ? meta.name : slot.label) + "</strong>" +
-          "<small>" + (hasSave ? "已有存档 · 种子 " + meta.seed : "空存档位置") + "</small></div>" +
+        return "<div class=\"world-card has-save\">" +
+          "<div class=\"world-card-copy\"><strong>" + escapeHtml(meta.name) + "</strong>" +
+          "<small>已有存档 · 种子 " + meta.seed + "</small></div>" +
+          "<div class=\"world-card-actions\">" +
           "<button class=\"world-card-button\" type=\"button\" data-world-slot=\"" + slot.id +
-          "\" data-world-action=\"" + (hasSave ? "enter" : "create") + "\">" +
-          (hasSave ? "进入世界" : "创建世界") + "</button></div>";
+          "\" data-world-action=\"enter\">进入世界</button>" +
+          "<button class=\"world-card-button delete\" type=\"button\" data-world-slot=\"" + slot.id +
+          "\" data-world-action=\"delete\">删除</button></div></div>";
       }).join("");
 
       worldList.querySelectorAll("[data-world-slot]").forEach(button => {
         button.addEventListener("click", () => {
-          if (button.dataset.worldAction === "create") {
-            showCreateWorld(button.dataset.worldSlot);
+          if (button.dataset.worldAction === "delete") {
+            deleteWorld(button.dataset.worldSlot);
             return;
           }
           startWorld(button.dataset.worldSlot, false);
         });
       });
+    }
+
+    function deleteWorld(slotId) {
+      const meta = readWorldMeta(slotId);
+      if (!window.confirm("确定删除存档“" + meta.name + "”吗？此操作不可恢复。")) {
+        return;
+      }
+      try {
+        localStorage.removeItem(saveStorageKeyFor(slotId));
+        localStorage.removeItem(worldMetaKey(slotId));
+        if (slotId === "world-1") {
+          localStorage.removeItem(legacySaveStorageKey);
+        }
+      } catch (error) {
+        showWorldSelectNotice("删除失败，请检查浏览器存储权限。");
+        return;
+      }
+      refreshWorldList();
+      showWorldSelectNotice("已删除存档“" + meta.name + "”。");
     }
 
     function showCreateWorld(slotId) {
@@ -2007,7 +2064,7 @@
 
     // 每次发布都更换版本号，避免 UnityCache/浏览器继续使用旧的同名构建文件。
     const buildUrl = "Build";
-    const buildVersion = "20260725-farm17";
+    const buildVersion = "20260725-farm18";
     const assetUrl = file => buildUrl + "/" + file + "?v=" + buildVersion;
     const loaderUrl = assetUrl("{{{ LOADER_FILENAME }}}");
     const config = {
