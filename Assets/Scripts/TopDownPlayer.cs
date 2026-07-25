@@ -42,6 +42,11 @@ namespace DoNotOpen.Prototype
             Coins += amount;
         }
 
+        public void SetCoins(int amount)
+        {
+            Coins = Mathf.Max(0, amount);
+        }
+
         public bool TrySpendCoins(int amount)
         {
             if (amount <= 0 || Coins < amount)
