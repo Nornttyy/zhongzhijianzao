@@ -200,7 +200,30 @@ namespace DoNotOpen.Prototype
 
         public bool IsWetAt(Vector2Int tile)
         {
-            return wetTiles.Contains(tile) && IsFarmlandAt(tile);
+            return IsFarmlandAt(tile) &&
+                   (wetTiles.Contains(tile) || IsNearWaterSource(tile));
+        }
+
+        private bool IsNearWaterSource(Vector2Int tile)
+        {
+            // 耕地紧挨水面时自然保持湿润，不需要反复使用水壶。
+            for (int offsetY = -1; offsetY <= 1; offsetY++)
+            {
+                for (int offsetX = -1; offsetX <= 1; offsetX++)
+                {
+                    if (offsetX == 0 && offsetY == 0)
+                    {
+                        continue;
+                    }
+
+                    if (GetGround(tile.x + offsetX, tile.y + offsetY) == GroundType.Water)
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
         }
 
         public bool TryTillAt(Vector2Int tile)
@@ -580,7 +603,7 @@ namespace DoNotOpen.Prototype
                     return new Vector2Int(0, 2);
                 case GroundType.Farmland:
                     // 第一行第 3 格是干耕地，第 4 格是浇水后的湿润耕地。
-                    return wetTiles.Contains(new Vector2Int(worldX, worldY))
+                    return IsWetAt(new Vector2Int(worldX, worldY))
                         ? new Vector2Int(3, 0)
                         : new Vector2Int(2, 0);
                 default:
