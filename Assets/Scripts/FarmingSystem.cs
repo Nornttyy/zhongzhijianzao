@@ -21,6 +21,7 @@ namespace DoNotOpen.Prototype
 
         private const float InteractionDistance = 2.45f;
         private const float GrowthStageDuration = 7f;
+        private const float DryGrowthMultiplier = 0.35f;
         private const int MatureStage = 2;
 
         private readonly Dictionary<Vector2Int, CropPlot> plots =
@@ -60,7 +61,10 @@ namespace DoNotOpen.Prototype
                 return;
             }
 
-            if (itemId == "wheat_seed" || itemId == "carrot_seed" || itemId == "hoe")
+            if (itemId == "wheat_seed" ||
+                itemId == "carrot_seed" ||
+                itemId == "watering_can" ||
+                itemId == "hoe")
             {
                 selectedItemId = itemId;
             }
@@ -93,6 +97,16 @@ namespace DoNotOpen.Prototype
             Vector2Int tile = world.WorldToTile(clickPosition);
             if (!IsWithinInteractionDistance(player.transform.position, tile))
             {
+                return;
+            }
+
+            if (selectedItemId == "watering_can")
+            {
+                if (world.TryWaterAt(tile))
+                {
+                    shop.ShowFarmingFeedback("耕地已浇水，作物会正常生长");
+                }
+
                 return;
             }
 
@@ -149,7 +163,7 @@ namespace DoNotOpen.Prototype
                     x = entry.Key.x,
                     y = entry.Key.y,
                     seedId = plot.SeedId,
-                    elapsed = Mathf.Max(0f, Time.time - plot.PlantedAt)
+                    elapsed = Mathf.Max(0f, plot.GrowthElapsed)
                 });
             }
 
@@ -202,7 +216,7 @@ namespace DoNotOpen.Prototype
             plots[tile] = new CropPlot
             {
                 SeedId = seedId,
-                PlantedAt = Time.time - Mathf.Max(0f, elapsed),
+                GrowthElapsed = Mathf.Max(0f, elapsed),
                 Stage = 0,
                 Renderer = renderer
             };
@@ -220,10 +234,15 @@ namespace DoNotOpen.Prototype
 
         private void UpdateGrowth()
         {
-            foreach (CropPlot plot in plots.Values)
+            foreach (KeyValuePair<Vector2Int, CropPlot> entry in plots)
             {
+                CropPlot plot = entry.Value;
+                float growthMultiplier = world.IsWetAt(entry.Key)
+                    ? 1f
+                    : DryGrowthMultiplier;
+                plot.GrowthElapsed += Time.deltaTime * growthMultiplier;
                 int nextStage = Mathf.Clamp(
-                    Mathf.FloorToInt((Time.time - plot.PlantedAt) / GrowthStageDuration),
+                    Mathf.FloorToInt(plot.GrowthElapsed / GrowthStageDuration),
                     0,
                     MatureStage);
                 if (nextStage == plot.Stage)
@@ -252,6 +271,7 @@ namespace DoNotOpen.Prototype
                 Destroy(plot.Renderer.gameObject);
             }
 
+            world.DryFarmlandAt(tile);
             plots.Remove(tile);
             shop.AddHarvest(plot.SeedId);
         }
@@ -282,7 +302,7 @@ namespace DoNotOpen.Prototype
         private sealed class CropPlot
         {
             public string SeedId;
-            public float PlantedAt;
+            public float GrowthElapsed;
             public int Stage;
             public SpriteRenderer Renderer;
         }
