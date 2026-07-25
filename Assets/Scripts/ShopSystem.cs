@@ -28,6 +28,7 @@ namespace DoNotOpen.Prototype
             "wood",
             "watering_can",
             "hoe",
+            "wood_sword",
             "wheat_crop",
             "carrot_crop"
         };
@@ -54,6 +55,7 @@ namespace DoNotOpen.Prototype
             itemCounts["wood"] = 0;
             itemCounts["watering_can"] = 1;
             itemCounts["hoe"] = 1;
+            itemCounts["wood_sword"] = 0;
             itemCounts["wheat_crop"] = 0;
             itemCounts["carrot_crop"] = 0;
 #if UNITY_WEBGL && !UNITY_EDITOR
@@ -199,6 +201,8 @@ namespace DoNotOpen.Prototype
                     return 12;
                 case "wood":
                     return 15;
+                case "wood_sword":
+                    return 30;
                 default:
                     return 0;
             }
