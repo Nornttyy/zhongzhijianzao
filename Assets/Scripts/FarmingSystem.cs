@@ -45,6 +45,12 @@ namespace DoNotOpen.Prototype
         // Called from the web hotbar when the player presses 1–9.
         public void SelectHotbarItem(string itemId)
         {
+            if (string.IsNullOrEmpty(itemId))
+            {
+                selectedItemId = string.Empty;
+                return;
+            }
+
             if (itemId == "wheat_seed" || itemId == "carrot_seed" || itemId == "hoe")
             {
                 selectedItemId = itemId;
@@ -76,8 +82,7 @@ namespace DoNotOpen.Prototype
 
             Vector2 clickPosition = viewCamera.ScreenToWorldPoint(Input.mousePosition);
             Vector2Int tile = world.WorldToTile(clickPosition);
-            Vector2 tilePosition = new Vector2(tile.x, tile.y);
-            if (Vector2.Distance(player.transform.position, tilePosition) > InteractionDistance)
+            if (!IsWithinInteractionDistance(player.transform.position, tile))
             {
                 return;
             }
@@ -108,15 +113,15 @@ namespace DoNotOpen.Prototype
                 return;
             }
 
-            if (!shop.TryConsumeItem(selectedItemId))
-            {
-                shop.ShowFarmingFeedback("先去商店购买种子");
-                return;
-            }
-
             Sprite[] stages = selectedItemId == "carrot_seed" ? carrotStages : wheatStages;
             if (stages == null || stages.Length == 0)
             {
+                return;
+            }
+
+            if (!shop.TryConsumeItem(selectedItemId))
+            {
+                shop.ShowFarmingFeedback("先去商店购买种子");
                 return;
             }
 
@@ -138,6 +143,16 @@ namespace DoNotOpen.Prototype
                 Renderer = renderer
             };
             shop.ShowFarmingFeedback(selectedItemId == "carrot_seed" ? "胡萝卜已播种" : "小麦已播种");
+        }
+
+        private static bool IsWithinInteractionDistance(Vector2 playerPosition, Vector2Int tile)
+        {
+            // Measure to the nearest point of the 1×1 tile, not only its center.
+            // This keeps edge clicks usable while preserving the interaction range.
+            float horizontal = Mathf.Max(Mathf.Abs(playerPosition.x - tile.x) - 0.5f, 0f);
+            float vertical = Mathf.Max(Mathf.Abs(playerPosition.y - tile.y) - 0.5f, 0f);
+            return horizontal * horizontal + vertical * vertical <=
+                   InteractionDistance * InteractionDistance;
         }
 
         private void UpdateGrowth()
