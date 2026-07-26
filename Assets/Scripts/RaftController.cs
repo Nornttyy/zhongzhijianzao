@@ -35,6 +35,10 @@ namespace DoNotOpen.Prototype
                 body.position = ClampPosition(body.position);
                 transform.position = body.position;
             }
+            if (Player != null)
+            {
+                Player.SetOceanBounds(bounds);
+            }
         }
 
         public void SetInputLocked(string locked)
@@ -135,7 +139,9 @@ namespace DoNotOpen.Prototype
             GameObject playerObject = new GameObject("Player");
             playerObject.transform.SetParent(transform, false);
             playerObject.transform.localPosition = new Vector3(0f, 0f, -0.1f);
-            SpriteRenderer renderer = playerObject.AddComponent<SpriteRenderer>();
+            GameObject visualObject = new GameObject("Player Visual");
+            visualObject.transform.SetParent(playerObject.transform, false);
+            SpriteRenderer renderer = visualObject.AddComponent<SpriteRenderer>();
             renderer.sprite = Sprite.Create(
                 playerTexture,
                 new Rect(0f, 0f, playerTexture.width, playerTexture.height),
@@ -143,7 +149,7 @@ namespace DoNotOpen.Prototype
                 PixelsPerUnit);
             renderer.sortingOrder = 20;
             Player = playerObject.AddComponent<RaftPlayerController>();
-            Player.Initialize(renderer);
+            Player.Initialize(this, visualObject.transform, renderer);
         }
 
         private static Sprite CreateAtlasSprite(Texture2D atlas, int column, int row, string name)
