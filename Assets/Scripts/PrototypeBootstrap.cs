@@ -9,24 +9,22 @@ namespace DoNotOpen.Prototype
 {
     public sealed class PrototypeBootstrap : MonoBehaviour
     {
-        private const float PlayerPixelsPerUnit = 12f;
         private const float AutosaveInterval = 1.5f;
-        private ShopSystem shop;
-        private ShopRoomSystem room;
-        private TopDownPlayer player;
+        private RaftController raft;
+        private OceanResourceSystem resources;
+        private OceanVisual ocean;
         private bool saveReady;
         private float nextAutosaveTime;
 
         [Serializable]
         private sealed class GameSaveData
         {
-            public int version = 2;
-            public int coins;
-            public bool hasPlayerPosition;
-            public float playerX;
-            public float playerY;
-            public List<ShopSystem.ItemSaveData> items =
-                new List<ShopSystem.ItemSaveData>();
+            public int version = 3;
+            public bool hasRaftPosition;
+            public float raftX;
+            public float raftY;
+            public List<OceanResourceSystem.ItemSaveData> resources =
+                new List<OceanResourceSystem.ItemSaveData>();
         }
 
 #if UNITY_WEBGL && !UNITY_EDITOR
@@ -35,7 +33,6 @@ namespace DoNotOpen.Prototype
 
         [DllImport("__Internal")]
         private static extern string LoadGameData();
-
 #endif
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -43,7 +40,7 @@ namespace DoNotOpen.Prototype
         {
             if (FindFirstObjectByType<PrototypeBootstrap>() == null)
             {
-                new GameObject("Shop Bootstrap").AddComponent<PrototypeBootstrap>();
+                new GameObject("Raft Survival Bootstrap").AddComponent<PrototypeBootstrap>();
             }
         }
 
@@ -52,33 +49,33 @@ namespace DoNotOpen.Prototype
             Application.targetFrameRate = 120;
             QualitySettings.antiAliasing = 0;
 
+            Texture2D raftAtlas = LoadPixelTexture("PixelArt/raft-materials");
             Texture2D playerTexture = LoadPixelTexture("PixelArt/player-idle");
-            Texture2D roomTexture = LoadPixelTexture("PixelArt/apartment-map");
             Font pixelFont = Resources.Load<Font>("Fonts/ark-pixel-12px");
-
-            if (roomTexture == null ||
-                playerTexture == null ||
-                pixelFont == null)
+            if (raftAtlas == null || playerTexture == null || pixelFont == null)
             {
-                Debug.LogError("One or more pixel-art resources could not be loaded.");
+                Debug.LogError("海上生存素材加载失败，请确认 raft-materials.png 和角色素材存在。");
                 return;
             }
 
             Camera camera = BuildCamera();
-            player = BuildPlayer(playerTexture);
+            ocean = gameObject.AddComponent<OceanVisual>();
+            ocean.Initialize(raftAtlas);
 
-            room = gameObject.AddComponent<ShopRoomSystem>();
-            room.Initialize(roomTexture);
-            player.SetMovementBounds(room.RoomBounds);
+            raft = BuildRaft(raftAtlas, playerTexture);
+            raft.SetMovementBounds(ocean.OceanBounds);
 
-            shop = gameObject.AddComponent<ShopSystem>();
-            shop.Initialize(player);
+            resources = gameObject.AddComponent<OceanResourceSystem>();
+            resources.Initialize(raft.transform, raftAtlas, ocean.OceanBounds);
+
+            HookSystem hook = gameObject.AddComponent<HookSystem>();
+            hook.Initialize(raft, resources, raftAtlas);
 
             CameraFollow follow = camera.gameObject.AddComponent<CameraFollow>();
-            follow.Initialize(player.transform, room.RoomBounds);
+            follow.Initialize(raft.transform, ocean.OceanBounds);
 
-            PrototypeHud hud = gameObject.AddComponent<PrototypeHud>();
-            hud.Initialize(null, player, pixelFont);
+            RaftHud hud = gameObject.AddComponent<RaftHud>();
+            hud.Initialize(raft, resources, pixelFont);
 
             LoadSavedGame();
             saveReady = true;
@@ -114,7 +111,7 @@ namespace DoNotOpen.Prototype
 
         private void LoadSavedGame()
         {
-            string json = null;
+            string json;
 #if UNITY_WEBGL && !UNITY_EDITOR
             json = LoadGameData();
 #else
@@ -133,42 +130,36 @@ namespace DoNotOpen.Prototype
                     return;
                 }
 
-                player.SetCoins(data.coins);
-                if (data.items != null)
+                if (data.resources != null)
                 {
-                    shop.RestoreItems(data.items);
+                    resources.RestoreItems(data.resources);
                 }
 
-                if (data.hasPlayerPosition)
+                if (data.hasRaftPosition)
                 {
-                    Vector2 savedPosition = new Vector2(data.playerX, data.playerY);
-                    if (room.RoomBounds.Contains(
-                            new Vector3(savedPosition.x, savedPosition.y, 0f)))
-                    {
-                        player.Teleport(savedPosition);
-                    }
+                    raft.Teleport(new Vector2(data.raftX, data.raftY));
                 }
             }
             catch (Exception exception)
             {
-                Debug.LogWarning("存档读取失败，将使用新游戏：" + exception.Message);
+                Debug.LogWarning("存档读取失败，将使用新木筏：" + exception.Message);
             }
         }
 
         private void SaveCurrentGame()
         {
-            if (!saveReady || player == null || room == null || shop == null)
+            if (!saveReady || raft == null || resources == null)
             {
                 return;
             }
 
+            Vector2 position = raft.Position;
             GameSaveData data = new GameSaveData
             {
-                coins = player.Coins,
-                hasPlayerPosition = true,
-                playerX = player.transform.position.x,
-                playerY = player.transform.position.y,
-                items = shop.CaptureItems()
+                hasRaftPosition = true,
+                raftX = position.x,
+                raftY = position.y,
+                resources = resources.CaptureItems()
             };
 
             string json = JsonUtility.ToJson(data);
@@ -180,34 +171,38 @@ namespace DoNotOpen.Prototype
 #endif
         }
 
-        // Explicit entry points for the web page. Keeping these on the
-        // bootstrap object avoids relying on SendMessage finding a sibling
-        // component in an IL2CPP WebGL build.
-        public void BuyItem(string itemId)
+        // Web page entry points retained for compatibility with the existing UI.
+        public void SaveGameNow()
         {
-            if (shop != null)
-            {
-                shop.BuyItem(itemId);
-            }
+            SaveCurrentGame();
         }
 
         public void SelectHotbarItem(string itemId)
         {
-            // Kept as a no-op entry point while the shop UI is being
-            // migrated. Older pages may still send this message.
+        }
+
+        public void BuyItem(string itemId)
+        {
         }
 
         public void SellItem(string itemId)
         {
-            if (shop != null)
-            {
-                shop.SellItem(itemId);
-            }
         }
 
-        public void SaveGameNow()
+        private static RaftController BuildRaft(Texture2D raftAtlas, Texture2D playerTexture)
         {
-            SaveCurrentGame();
+            GameObject raftObject = new GameObject("Player");
+            raftObject.transform.position = Vector3.zero;
+
+            Rigidbody2D body = raftObject.AddComponent<Rigidbody2D>();
+            body.gravityScale = 0f;
+            body.freezeRotation = true;
+            body.interpolation = RigidbodyInterpolation2D.Interpolate;
+            body.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
+
+            RaftController controller = raftObject.AddComponent<RaftController>();
+            controller.Initialize(raftAtlas, playerTexture);
+            return controller;
         }
 
         private static Camera BuildCamera()
@@ -221,43 +216,12 @@ namespace DoNotOpen.Prototype
                 cameraObject.AddComponent<AudioListener>();
             }
 
-            camera.transform.SetPositionAndRotation(new Vector3(0f, -1f, -10f), Quaternion.identity);
+            camera.transform.SetPositionAndRotation(new Vector3(0f, 0f, -10f), Quaternion.identity);
             camera.orthographic = true;
             camera.orthographicSize = 5.65f;
             camera.clearFlags = CameraClearFlags.SolidColor;
-            camera.backgroundColor = new Color32(49, 64, 48, 255);
+            camera.backgroundColor = new Color32(35, 118, 158, 255);
             return camera;
-        }
-
-        private static TopDownPlayer BuildPlayer(Texture2D playerTexture)
-        {
-            GameObject player = new GameObject("Player");
-            player.transform.position = new Vector3(1f, -1f, 0f);
-
-            Rigidbody2D body = player.AddComponent<Rigidbody2D>();
-            body.gravityScale = 0f;
-            body.freezeRotation = true;
-            body.interpolation = RigidbodyInterpolation2D.Interpolate;
-            body.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
-
-            CircleCollider2D collider = player.AddComponent<CircleCollider2D>();
-            collider.radius = 0.2f;
-            collider.offset = new Vector2(0f, 0.22f);
-
-            GameObject visual = new GameObject("Player Art");
-            visual.transform.SetParent(player.transform, false);
-            SpriteRenderer renderer = visual.AddComponent<SpriteRenderer>();
-            renderer.sprite = Sprite.Create(
-                playerTexture,
-                new Rect(0f, 0f, playerTexture.width, playerTexture.height),
-                new Vector2(0.5f, 0.08f),
-                PlayerPixelsPerUnit);
-            renderer.sortingOrder = 320;
-
-            TopDownPlayer controller = player.AddComponent<TopDownPlayer>();
-            controller.Speed = 3.6f;
-            controller.ConfigureVisual(visual.transform, renderer);
-            return controller;
         }
 
         private static Texture2D LoadPixelTexture(string resourcePath)
@@ -266,7 +230,7 @@ namespace DoNotOpen.Prototype
             if (texture != null)
             {
                 texture.filterMode = FilterMode.Point;
-                texture.wrapMode = TextureWrapMode.Clamp;
+                texture.wrapMode = TextureWrapMode.Repeat;
             }
 
             return texture;
