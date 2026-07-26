@@ -34,7 +34,7 @@ namespace DoNotOpen.Prototype
             EnsureStyles();
             GUI.color = Color.white;
             GUI.Label(new Rect(24f, 20f, 240f, 30f), "海上生存", titleStyle);
-            GUI.Label(new Rect(24f, 52f, 520f, 24f), "WASD 移动木筏 · 鼠标瞄准 · 左键发射钩子", bodyStyle);
+            GUI.Label(new Rect(24f, 52f, 620f, 24f), "WASD 移动玩家 · 木筏随海流漂移 · 左键发射钩子", bodyStyle);
 
             string inventory = "木材 " + resources.GetCount("wood") +
                 "   塑料瓶 " + resources.GetCount("plastic_bottle") +
