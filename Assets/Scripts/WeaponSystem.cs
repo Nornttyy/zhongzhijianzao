@@ -13,6 +13,7 @@ namespace DoNotOpen.Prototype
         private const float AttackDuration = 0.18f;
         private const float AttackDistance = 0.78f;
         private const float WateringCanScale = 0.72f;
+        private const float SwordScale = 0.72f;
 
         private TopDownPlayer player;
         private ProceduralWorld world;
@@ -120,7 +121,9 @@ namespace DoNotOpen.Prototype
             heldToolRenderer.flipY = false;
             float toolScale = selectedItemId == "watering_can"
                 ? WateringCanScale
-                : 1f;
+                : (selectedItemId == "wood_sword" || selectedItemId == "stone_sword"
+                    ? SwordScale
+                    : 1f);
             heldToolRenderer.transform.localScale = new Vector3(toolScale, toolScale, 1f);
             heldToolRenderer.sortingOrder =
                 ProceduralWorld.GetSurfaceSortingOrder(player.transform.position.y) + 12;
@@ -194,6 +197,7 @@ namespace DoNotOpen.Prototype
         private void CreateSwing()
         {
             GameObject swing = new GameObject("Wood Sword Swing");
+            swing.transform.localScale = Vector3.one * SwordScale;
             SpriteRenderer renderer = swing.AddComponent<SpriteRenderer>();
             renderer.sprite = swordSprite;
             renderer.sortingOrder = ProceduralWorld.GetSurfaceSortingOrder(
