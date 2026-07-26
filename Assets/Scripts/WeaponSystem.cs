@@ -12,6 +12,7 @@ namespace DoNotOpen.Prototype
         private const float AttackCooldown = 0.34f;
         private const float AttackDuration = 0.18f;
         private const float AttackDistance = 0.78f;
+        private const float WateringCanScale = 0.72f;
 
         private TopDownPlayer player;
         private ProceduralWorld world;
@@ -107,11 +108,16 @@ namespace DoNotOpen.Prototype
             Vector2 direction = player.Facing.sqrMagnitude > 0.01f
                 ? player.Facing.normalized
                 : Vector2.down;
-            Vector2 side = new Vector2(-direction.y, direction.x);
-            Vector2 offset = direction * 0.56f + side * 0.10f;
-            // 素材保持竖直，只改变位置；父级视觉层会带来玩家移动时的弹跳和轻微抖动。
+            Vector2 offset = direction * 0.56f;
+            // 素材保持竖直，只做左右翻面；左右朝向不再附带向下偏移。
             heldToolRenderer.transform.localPosition = new Vector3(offset.x, offset.y, 0f);
             heldToolRenderer.transform.localRotation = Quaternion.identity;
+            heldToolRenderer.flipX = direction.x < -0.01f;
+            heldToolRenderer.flipY = false;
+            float toolScale = selectedItemId == "watering_can"
+                ? WateringCanScale
+                : 1f;
+            heldToolRenderer.transform.localScale = new Vector3(toolScale, toolScale, 1f);
             heldToolRenderer.sortingOrder =
                 ProceduralWorld.GetSurfaceSortingOrder(player.transform.position.y) + 12;
         }
