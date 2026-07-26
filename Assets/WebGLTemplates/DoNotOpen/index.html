@@ -2106,7 +2106,7 @@
 
     // 每次发布都更换版本号，避免 UnityCache/浏览器继续使用旧的同名构建文件。
     const buildUrl = "Build";
-    const buildVersion = "20260726-raft1";
+    const buildVersion = "20260726-raft3";
     const assetUrl = file => buildUrl + "/" + file + "?v=" + buildVersion;
     const loaderUrl = assetUrl("{{{ LOADER_FILENAME }}}");
     const config = {
@@ -2150,7 +2150,7 @@
           persistentHotbar.classList.remove("visible");
           shopToggle.classList.remove("visible");
           sellToggle.classList.remove("visible");
-          hotkeyHud.textContent = "WASD 移动玩家 · 木筏随海流漂移 · 左键发射钩子";
+          hotkeyHud.textContent = "WASD 移动玩家 · 木筏随海流漂移 · 左键蓄力钩子 · E 背包";
           hotkeyHud.classList.add("visible");
           canvas.focus();
         }).catch(message => {
@@ -2193,9 +2193,6 @@
         event.preventDefault();
         event.stopImmediatePropagation();
         return;
-      }
-      if (key === "e") {
-        event.preventDefault();
       }
       if (/^[1-9]$/.test(key)) {
         selectedHotbarIndex = Number(key) - 1;
