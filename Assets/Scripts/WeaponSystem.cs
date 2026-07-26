@@ -4,7 +4,7 @@ namespace DoNotOpen.Prototype
 {
     /// <summary>
     /// Handles the first weapon in the game. The wooden sword has a short
-    /// left-click swing now; its hit window is kept in one place so enemies
+    /// left-click thrust now; its hit window is kept in one place so enemies
     /// can receive damage when they are added later.
     /// </summary>
     public sealed class WeaponSystem : MonoBehaviour
@@ -26,6 +26,7 @@ namespace DoNotOpen.Prototype
         private string selectedItemId = string.Empty;
         private string selectedWeaponId = string.Empty;
         private int heldToolSide = 1;
+        private bool attackActive;
         private float nextAttackTime;
 
         public void Initialize(
@@ -99,6 +100,7 @@ namespace DoNotOpen.Prototype
             }
 
             bool visible = heldToolSprite != null &&
+                           !attackActive &&
                            !player.IsInputLocked &&
                            !world.IsInCave;
             heldToolRenderer.enabled = visible;
@@ -187,10 +189,11 @@ namespace DoNotOpen.Prototype
             }
 
             nextAttackTime = Time.time + AttackCooldown;
+            attackActive = true;
             CreateSwing();
             if (shop != null)
             {
-                shop.ShowFarmingFeedback("木剑挥砍");
+                shop.ShowFarmingFeedback("木剑突刺");
             }
         }
 
@@ -213,28 +216,26 @@ namespace DoNotOpen.Prototype
             Vector2 direction = player.Facing.sqrMagnitude > 0.01f
                 ? player.Facing.normalized
                 : Vector2.down;
-            float directionAngle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
-            float startAngle = directionAngle - 70f;
-            float endAngle = directionAngle + 70f;
-            Vector2 perpendicular = new Vector2(-direction.y, direction.x);
+            Vector2 startOffset = new Vector2(heldToolSide * 0.56f, 0f);
+            Vector2 endOffset = direction * (AttackDistance + 0.28f);
+            // 像素剑素材默认竖直，旋转到玩家朝向后变成前刺姿势。
+            float endAngle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg - 90f;
             float elapsed = 0f;
 
             while (elapsed < AttackDuration && swing != null)
             {
                 elapsed += Time.deltaTime;
                 float progress = Mathf.Clamp01(elapsed / AttackDuration);
-                float arc = Mathf.SmoothStep(0f, 1f, progress);
-                Vector2 offset = direction *
-                    (AttackDistance + Mathf.Sin(progress * Mathf.PI) * 0.16f) +
-                    perpendicular * Mathf.Lerp(-0.3f, 0.3f, arc);
+                float thrust = Mathf.SmoothStep(0f, 1f, progress);
+                Vector2 offset = Vector2.Lerp(startOffset, endOffset, thrust);
                 swing.transform.position = player.transform.position +
                     new Vector3(offset.x, offset.y, 0f);
                 swing.transform.rotation = Quaternion.Euler(
                     0f,
                     0f,
-                    Mathf.Lerp(startAngle, endAngle, arc));
+                    Mathf.LerpAngle(0f, endAngle, thrust));
                 Color color = renderer.color;
-                color.a = 1f - progress * 0.2f;
+                color.a = 1f;
                 renderer.color = color;
                 yield return null;
             }
@@ -243,6 +244,7 @@ namespace DoNotOpen.Prototype
             {
                 Destroy(swing);
             }
+            attackActive = false;
         }
 
         private Sprite CreateSwordSprite(Texture2D texture)
