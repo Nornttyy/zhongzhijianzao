@@ -5,19 +5,19 @@ namespace DoNotOpen.Prototype
     [RequireComponent(typeof(Rigidbody2D))]
     public sealed class RaftController : MonoBehaviour
     {
-        private const float MoveSpeed = 3.4f;
+        private const float DriftSpeed = 0.32f;
         private const float BoundaryMargin = 1.2f;
         private const float PixelsPerUnit = 16f;
 
         private Rigidbody2D body;
-        private Vector2 movement;
+        private Vector2 driftDirection = new Vector2(0.82f, 0.18f).normalized;
         private Bounds movementBounds;
         private bool hasBounds;
         private bool inputLocked;
-        private SpriteRenderer playerRenderer;
 
         public bool IsInputLocked { get { return inputLocked; } }
         public Vector2 Position { get { return body == null ? (Vector2)transform.position : body.position; } }
+        public RaftPlayerController Player { get; private set; }
 
         public void Initialize(Texture2D atlas, Texture2D playerTexture)
         {
@@ -40,7 +40,6 @@ namespace DoNotOpen.Prototype
         public void SetInputLocked(string locked)
         {
             inputLocked = string.Equals(locked, "true", System.StringComparison.OrdinalIgnoreCase);
-            movement = Vector2.zero;
             if (body != null)
             {
                 body.linearVelocity = Vector2.zero;
@@ -67,21 +66,6 @@ namespace DoNotOpen.Prototype
 
         private void Update()
         {
-            if (inputLocked)
-            {
-                movement = Vector2.zero;
-                return;
-            }
-
-            movement = new Vector2(
-                Input.GetAxisRaw("Horizontal"),
-                Input.GetAxisRaw("Vertical"));
-            movement = Vector2.ClampMagnitude(movement, 1f);
-
-            if (playerRenderer != null && Mathf.Abs(movement.x) > 0.01f)
-            {
-                playerRenderer.flipX = movement.x < 0f;
-            }
         }
 
         private void FixedUpdate()
@@ -91,13 +75,20 @@ namespace DoNotOpen.Prototype
                 return;
             }
 
-            if (inputLocked)
+            Vector2 next = body.position + driftDirection * (DriftSpeed * Time.fixedDeltaTime);
+            if (hasBounds &&
+                (next.x < movementBounds.min.x + BoundaryMargin || next.x > movementBounds.max.x - BoundaryMargin))
             {
-                body.linearVelocity = Vector2.zero;
-                return;
+                driftDirection.x *= -1f;
+                next = body.position + driftDirection * (DriftSpeed * Time.fixedDeltaTime);
+            }
+            if (hasBounds &&
+                (next.y < movementBounds.min.y + BoundaryMargin || next.y > movementBounds.max.y - BoundaryMargin))
+            {
+                driftDirection.y *= -1f;
+                next = body.position + driftDirection * (DriftSpeed * Time.fixedDeltaTime);
             }
 
-            Vector2 next = body.position + movement * (MoveSpeed * Time.fixedDeltaTime);
             body.position = hasBounds ? ClampPosition(next) : next;
             body.linearVelocity = Vector2.zero;
         }
@@ -141,16 +132,18 @@ namespace DoNotOpen.Prototype
                 return;
             }
 
-            GameObject playerObject = new GameObject("Raft Player");
+            GameObject playerObject = new GameObject("Player");
             playerObject.transform.SetParent(transform, false);
             playerObject.transform.localPosition = new Vector3(0f, 0f, -0.1f);
-            playerRenderer = playerObject.AddComponent<SpriteRenderer>();
-            playerRenderer.sprite = Sprite.Create(
+            SpriteRenderer renderer = playerObject.AddComponent<SpriteRenderer>();
+            renderer.sprite = Sprite.Create(
                 playerTexture,
                 new Rect(0f, 0f, playerTexture.width, playerTexture.height),
                 new Vector2(0.5f, 0.5f),
                 PixelsPerUnit);
-            playerRenderer.sortingOrder = 20;
+            renderer.sortingOrder = 20;
+            Player = playerObject.AddComponent<RaftPlayerController>();
+            Player.Initialize(renderer);
         }
 
         private static Sprite CreateAtlasSprite(Texture2D atlas, int column, int row, string name)
