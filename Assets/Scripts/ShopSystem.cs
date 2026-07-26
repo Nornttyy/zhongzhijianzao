@@ -37,6 +37,10 @@ namespace DoNotOpen.Prototype
             new Dictionary<string, int>();
 
         private TopDownPlayer player;
+        private int lastBuyFrame = -1;
+        private string lastBuyItem = string.Empty;
+        private int lastSellFrame = -1;
+        private string lastSellItem = string.Empty;
 
 #if UNITY_WEBGL && !UNITY_EDITOR
         [DllImport("__Internal")]
@@ -49,27 +53,36 @@ namespace DoNotOpen.Prototype
         public void Initialize(TopDownPlayer controlledPlayer)
         {
             player = controlledPlayer;
-            itemCounts["wheat_seed"] = 10;
+            // The shop room starts clean. Farming and combat are no longer
+            // spawned by the game bootstrap, so old starter tools/seeds must
+            // not leak into the new shop-first inventory.
+            itemCounts["wheat_seed"] = 0;
             itemCounts["carrot_seed"] = 0;
             itemCounts["fertilizer"] = 0;
             itemCounts["wood"] = 0;
-            itemCounts["watering_can"] = 1;
-            itemCounts["hoe"] = 1;
+            itemCounts["watering_can"] = 0;
+            itemCounts["hoe"] = 0;
             itemCounts["wood_sword"] = 0;
             itemCounts["wheat_crop"] = 0;
             itemCounts["carrot_crop"] = 0;
-#if UNITY_WEBGL && !UNITY_EDITOR
-            NotifyShopItem("wheat_seed", 10);
-            NotifyShopItem("watering_can", 1);
-            NotifyShopItem("hoe", 1);
-#endif
         }
 
         // Called by the HTML shop through Unity's SendMessage API.
         public void BuyItem(string itemId)
         {
             int price = GetPrice(itemId);
-            if (price <= 0 || player == null || !player.TrySpendCoins(price))
+            // SendMessage can arrive twice for one browser click. Ignore only
+            // same-frame duplicates so two intentional clicks still work.
+            if (lastBuyFrame == Time.frameCount && lastBuyItem == itemId)
+            {
+                return;
+            }
+
+            lastBuyFrame = Time.frameCount;
+            lastBuyItem = itemId;
+            if (price <= 0 || player == null ||
+                (itemId == "wood_sword" && GetCount(itemId) >= 1) ||
+                !player.TrySpendCoins(price))
             {
                 return;
             }
@@ -151,6 +164,13 @@ namespace DoNotOpen.Prototype
         public void SellItem(string itemId)
         {
             int price = GetSellPrice(itemId);
+            if (lastSellFrame == Time.frameCount && lastSellItem == itemId)
+            {
+                return;
+            }
+
+            lastSellFrame = Time.frameCount;
+            lastSellItem = itemId;
             if (price <= 0 || player == null || !TryConsumeItem(itemId))
             {
                 return;
