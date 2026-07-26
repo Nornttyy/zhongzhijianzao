@@ -1089,6 +1089,14 @@
     .sprite-r3-c5 { background-position: 71.4286% 100% !important; }
     .sprite-r3-c6 { background-position: 85.7143% 100% !important; }
 
+    /* 工具与武器使用第四行的独立 12×12 图标，避免回退到木材格。 */
+    .shop-icon.sprite-r3-c0,
+    .slot-icon.sprite-r3-c0 { background-position: 0% 100% !important; }
+    .shop-icon.sprite-r3-c5,
+    .slot-icon.sprite-r3-c5 { background-position: 71.4286% 100% !important; }
+    .shop-icon.sprite-r3-c6,
+    .slot-icon.sprite-r3-c6 { background-position: 85.7143% 100% !important; }
+
     .slot-count {
       position: absolute;
       right: 3px;
@@ -1458,7 +1466,7 @@
             <span class="shop-icon sprite-r0-c3"></span><span class="shop-copy"><strong>木材</strong><small>建造系统的基础材料 · <span class="price"><span class="coin-sprite coin-small"></span>15</span></small></span>
           </button>
           <button class="shop-button" data-item="wood_sword" data-price="30" data-label="木剑">
-            <span class="shop-icon sprite-r0-c3"></span><span class="shop-copy"><strong>木剑</strong><small>右键挥砍 · <span class="price"><span class="coin-sprite coin-small"></span>30</span></small></span>
+            <span class="shop-icon sprite-r3-c0"></span><span class="shop-copy"><strong>木剑</strong><small>左键挥砍 · <span class="price"><span class="coin-sprite coin-small"></span>30</span></small></span>
           </button>
         </div>
       </div>
@@ -1813,7 +1821,7 @@
       const filled = itemId && count > 0;
       const sprite = itemId ? getItemSprite(itemId) : "";
       const selected = slotType === "hotbar" && slotIndex === selectedHotbarIndex;
-      const countMarkup = filled && itemId !== "hoe" && itemId !== "watering_can"
+      const countMarkup = filled && !isNonStackable(itemId)
         ? "<span class=\"slot-count\">" + count + "</span>"
         : "";
       return "<div class=\"inventory-slot" + (filled ? " filled" : "") +
@@ -1835,10 +1843,16 @@
         watering_can: "sprite-r0-c4",
         hoe: "sprite-r0-c5",
         wood_sword: "sprite-r3-c0",
+        wood_pickaxe: "sprite-r3-c5",
+        stone_pickaxe: "sprite-r3-c6",
         wheat_crop: "sprite-r2-c0",
         carrot_crop: "sprite-r2-c1"
       };
       return sprites[itemId] || "";
+    }
+
+    function isNonStackable(itemId) {
+      return itemId === "hoe" || itemId === "watering_can" || itemId === "wood_sword";
     }
 
     function EnsureItemPlacement(itemId) {
@@ -2035,7 +2049,12 @@
     });
 
     document.querySelectorAll("[data-item]").forEach(button => {
-      button.addEventListener("click", () => {
+      button.addEventListener("click", event => {
+        event.preventDefault();
+        event.stopPropagation();
+        if (button.dataset.busy === "true") return;
+        button.dataset.busy = "true";
+        window.setTimeout(() => { delete button.dataset.busy; }, 250);
         if (!unityInstance) {
           showHotkeyFeedback("世界还在载入");
           return;
@@ -2048,6 +2067,10 @@
           showUtilityNotice("金币不足，无法购买" + label, "error");
           return;
         }
+        if (isNonStackable(id) && (shopInventory[id] || 0) > 0) {
+          showUtilityNotice("你已经拥有" + label, "error");
+          return;
+        }
 
         unityInstance.SendMessage("Prototype Bootstrap", "BuyItem", id);
         openUtility("shop");
@@ -2056,7 +2079,12 @@
     });
 
     document.querySelectorAll("[data-sell-item]").forEach(button => {
-      button.addEventListener("click", () => {
+      button.addEventListener("click", event => {
+        event.preventDefault();
+        event.stopPropagation();
+        if (button.dataset.busy === "true") return;
+        button.dataset.busy = "true";
+        window.setTimeout(() => { delete button.dataset.busy; }, 250);
         if (!unityInstance) {
           showHotkeyFeedback("世界还在载入");
           return;
@@ -2078,7 +2106,7 @@
 
     // 每次发布都更换版本号，避免 UnityCache/浏览器继续使用旧的同名构建文件。
     const buildUrl = "Build";
-    const buildVersion = "20260725-farm22";
+    const buildVersion = "20260725-farm24";
     const assetUrl = file => buildUrl + "/" + file + "?v=" + buildVersion;
     const loaderUrl = assetUrl("docs.loader.js");
     const config = {
