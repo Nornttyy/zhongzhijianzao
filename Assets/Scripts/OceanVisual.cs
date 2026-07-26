@@ -6,21 +6,15 @@ namespace DoNotOpen.Prototype
     {
         private const float PixelsPerUnit = 16f;
         private const int TileSize = 16;
-        private Sprite[] waterFrames;
+        private Sprite waterSprite;
         private SpriteRenderer[] tiles;
-        private float nextFrameTime;
-        private int frame;
 
         public Bounds OceanBounds { get; private set; }
 
         public void Initialize(Texture2D atlas)
         {
             OceanBounds = new Bounds(Vector3.zero, new Vector3(64f, 64f, 1f));
-            waterFrames = new Sprite[4];
-            for (int i = 0; i < waterFrames.Length; i++)
-            {
-                waterFrames[i] = CreateAtlasSprite(atlas, i, 0, "Water Frame " + (i + 1));
-            }
+            waterSprite = CreateAtlasSprite(atlas, 0, 0, "Water");
 
             int width = Mathf.CeilToInt(OceanBounds.size.x);
             int height = Mathf.CeilToInt(OceanBounds.size.y);
@@ -37,32 +31,9 @@ namespace DoNotOpen.Prototype
                         OceanBounds.min.y + y + 0.5f,
                         1f);
                     SpriteRenderer renderer = tileObject.AddComponent<SpriteRenderer>();
-                    renderer.sprite = waterFrames[0];
+                    renderer.sprite = waterSprite;
                     renderer.sortingOrder = -100;
                     tiles[index++] = renderer;
-                }
-            }
-        }
-
-        private void Update()
-        {
-            if (waterFrames == null || waterFrames.Length == 0 || Time.time < nextFrameTime)
-            {
-                return;
-            }
-
-            frame = (frame + 1) % waterFrames.Length;
-            nextFrameTime = Time.time + 0.24f;
-            if (tiles == null)
-            {
-                return;
-            }
-
-            foreach (SpriteRenderer tile in tiles)
-            {
-                if (tile != null)
-                {
-                    tile.sprite = waterFrames[frame];
                 }
             }
         }
