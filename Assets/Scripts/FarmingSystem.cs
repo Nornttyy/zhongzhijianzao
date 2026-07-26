@@ -103,6 +103,14 @@ namespace DoNotOpen.Prototype
                 return;
             }
 
+            // 收割是对成熟作物的直接互动，不应被当前快捷栏里的锄头、
+            // 水壶或木剑拦截。这样换着工具靠近作物时也能稳定收割。
+            if (plots.TryGetValue(tile, out CropPlot crop) && IsMature(crop))
+            {
+                Harvest(tile, crop);
+                return;
+            }
+
             if (selectedItemId == "watering_can")
             {
                 if (world.TryWaterAt(tile))
@@ -131,11 +139,6 @@ namespace DoNotOpen.Prototype
 
             if (plots.TryGetValue(tile, out CropPlot existing))
             {
-                if (existing.Stage >= MatureStage)
-                {
-                    Harvest(tile, existing);
-                }
-
                 return;
             }
 
@@ -213,16 +216,33 @@ namespace DoNotOpen.Prototype
             // edge on the bottom of the 1×1 farmland tile.
             cropObject.transform.position = new Vector3(tile.x, tile.y - 0.5f, 0f);
             SpriteRenderer renderer = cropObject.AddComponent<SpriteRenderer>();
-            renderer.sprite = stages[0];
+            float safeElapsed = Mathf.Max(0f, elapsed);
+            int stage = GetStageForElapsed(safeElapsed);
+            renderer.sprite = stages[stage];
             renderer.sortingOrder = ProceduralWorld.GetSurfaceSortingOrder(tile.y) - 10;
 
             plots[tile] = new CropPlot
             {
                 SeedId = seedId,
-                GrowthElapsed = Mathf.Max(0f, elapsed),
-                Stage = 0,
+                GrowthElapsed = safeElapsed,
+                Stage = stage,
                 Renderer = renderer
             };
+        }
+
+        private static bool IsMature(CropPlot plot)
+        {
+            return plot != null &&
+                   (plot.Stage >= MatureStage ||
+                    plot.GrowthElapsed >= GrowthStageDuration * MatureStage);
+        }
+
+        private static int GetStageForElapsed(float elapsed)
+        {
+            return Mathf.Clamp(
+                Mathf.FloorToInt(elapsed / GrowthStageDuration),
+                0,
+                MatureStage);
         }
 
         private static bool IsWithinInteractionDistance(Vector2 playerPosition, Vector2Int tile)
@@ -244,10 +264,7 @@ namespace DoNotOpen.Prototype
                     ? 1f
                     : DryGrowthMultiplier;
                 plot.GrowthElapsed += Time.deltaTime * growthMultiplier;
-                int nextStage = Mathf.Clamp(
-                    Mathf.FloorToInt(plot.GrowthElapsed / GrowthStageDuration),
-                    0,
-                    MatureStage);
+                int nextStage = GetStageForElapsed(plot.GrowthElapsed);
                 if (nextStage == plot.Stage)
                 {
                     continue;
