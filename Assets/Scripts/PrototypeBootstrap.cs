@@ -12,20 +12,10 @@ namespace DoNotOpen.Prototype
         private const float PlayerPixelsPerUnit = 12f;
         private const float AutosaveInterval = 1.5f;
         private ShopSystem shop;
-        private FarmingSystem farming;
-        private ProceduralWorld world;
+        private ShopRoomSystem room;
         private TopDownPlayer player;
-        private WeaponSystem weapon;
         private bool saveReady;
         private float nextAutosaveTime;
-
-        [Serializable]
-        private sealed class SavedTileData
-        {
-            public int x;
-            public int y;
-            public bool wet;
-        }
 
         [Serializable]
         private sealed class GameSaveData
@@ -37,10 +27,6 @@ namespace DoNotOpen.Prototype
             public float playerY;
             public List<ShopSystem.ItemSaveData> items =
                 new List<ShopSystem.ItemSaveData>();
-            public List<SavedTileData> tilledTiles =
-                new List<SavedTileData>();
-            public List<FarmingSystem.CropSaveData> crops =
-                new List<FarmingSystem.CropSaveData>();
         }
 
 #if UNITY_WEBGL && !UNITY_EDITOR
@@ -50,8 +36,6 @@ namespace DoNotOpen.Prototype
         [DllImport("__Internal")]
         private static extern string LoadGameData();
 
-        [DllImport("__Internal")]
-        private static extern int GetSelectedWorldSeed();
 #endif
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -59,7 +43,7 @@ namespace DoNotOpen.Prototype
         {
             if (FindFirstObjectByType<PrototypeBootstrap>() == null)
             {
-                new GameObject("Cozy Farm Bootstrap").AddComponent<PrototypeBootstrap>();
+                new GameObject("Shop Bootstrap").AddComponent<PrototypeBootstrap>();
             }
         }
 
@@ -68,16 +52,12 @@ namespace DoNotOpen.Prototype
             Application.targetFrameRate = 120;
             QualitySettings.antiAliasing = 0;
 
-            Texture2D worldTexture = LoadPixelTexture("PixelArt/world-tiles");
             Texture2D playerTexture = LoadPixelTexture("PixelArt/player-idle");
-            Texture2D caveEntranceTexture = LoadPixelTexture("PixelArt/cave-entrance");
-            Texture2D farmingTexture = LoadPixelTexture("PixelArt/shop-materials");
+            Texture2D roomTexture = LoadPixelTexture("PixelArt/apartment-map");
             Font pixelFont = Resources.Load<Font>("Fonts/ark-pixel-12px");
 
-            if (worldTexture == null ||
+            if (roomTexture == null ||
                 playerTexture == null ||
-                caveEntranceTexture == null ||
-                farmingTexture == null ||
                 pixelFont == null)
             {
                 Debug.LogError("One or more pixel-art resources could not be loaded.");
@@ -87,31 +67,18 @@ namespace DoNotOpen.Prototype
             Camera camera = BuildCamera();
             player = BuildPlayer(playerTexture);
 
-            world = gameObject.AddComponent<ProceduralWorld>();
-#if UNITY_WEBGL && !UNITY_EDITOR
-            world.SetSeed(GetSelectedWorldSeed());
-#endif
-            world.Initialize(worldTexture, caveEntranceTexture, player);
-            player.World = world;
-
-            BuildingSystem buildings = gameObject.AddComponent<BuildingSystem>();
-            buildings.Initialize(player, world);
-            player.Buildings = buildings;
+            room = gameObject.AddComponent<ShopRoomSystem>();
+            room.Initialize(roomTexture);
+            player.SetMovementBounds(room.RoomBounds);
 
             shop = gameObject.AddComponent<ShopSystem>();
             shop.Initialize(player);
 
-            farming = gameObject.AddComponent<FarmingSystem>();
-            farming.Initialize(player, world, shop, farmingTexture);
-
-            weapon = gameObject.AddComponent<WeaponSystem>();
-            weapon.Initialize(player, world, shop, farmingTexture);
-
             CameraFollow follow = camera.gameObject.AddComponent<CameraFollow>();
-            follow.Initialize(player.transform, world.MapBounds);
+            follow.Initialize(player.transform, room.RoomBounds);
 
             PrototypeHud hud = gameObject.AddComponent<PrototypeHud>();
-            hud.Initialize(world, player, pixelFont);
+            hud.Initialize(null, player, pixelFont);
 
             LoadSavedGame();
             saveReady = true;
@@ -172,43 +139,15 @@ namespace DoNotOpen.Prototype
                     shop.RestoreItems(data.items);
                 }
 
-                if (data.tilledTiles != null)
-                {
-                    foreach (SavedTileData savedTile in data.tilledTiles)
-                    {
-                        if (savedTile != null)
-                        {
-                            world.RestoreTilledTile(
-                                new Vector2Int(savedTile.x, savedTile.y));
-                            if (savedTile.wet)
-                            {
-                                world.RestoreWetTile(
-                                    new Vector2Int(savedTile.x, savedTile.y));
-                            }
-                        }
-                    }
-                }
-
-                if (data.crops != null)
-                {
-                    foreach (FarmingSystem.CropSaveData savedCrop in data.crops)
-                    {
-                        farming.RestoreCrop(savedCrop);
-                    }
-                }
-
                 if (data.hasPlayerPosition)
                 {
                     Vector2 savedPosition = new Vector2(data.playerX, data.playerY);
-                    if (world.MapBounds.Contains(
-                            new Vector3(savedPosition.x, savedPosition.y, 0f)) &&
-                        world.CanStandAt(savedPosition, 0.2f))
+                    if (room.RoomBounds.Contains(
+                            new Vector3(savedPosition.x, savedPosition.y, 0f)))
                     {
                         player.Teleport(savedPosition);
                     }
                 }
-
-                farming.RefreshGrowth();
             }
             catch (Exception exception)
             {
@@ -218,7 +157,7 @@ namespace DoNotOpen.Prototype
 
         private void SaveCurrentGame()
         {
-            if (!saveReady || player == null || world == null || shop == null || farming == null)
+            if (!saveReady || player == null || room == null || shop == null)
             {
                 return;
             }
@@ -229,18 +168,8 @@ namespace DoNotOpen.Prototype
                 hasPlayerPosition = true,
                 playerX = player.transform.position.x,
                 playerY = player.transform.position.y,
-                items = shop.CaptureItems(),
-                crops = farming.CaptureCrops()
+                items = shop.CaptureItems()
             };
-            foreach (Vector2Int tile in world.CaptureTilledTiles())
-            {
-                data.tilledTiles.Add(new SavedTileData
-                {
-                    x = tile.x,
-                    y = tile.y,
-                    wet = world.IsWetAt(tile)
-                });
-            }
 
             string json = JsonUtility.ToJson(data);
 #if UNITY_WEBGL && !UNITY_EDITOR
@@ -264,14 +193,8 @@ namespace DoNotOpen.Prototype
 
         public void SelectHotbarItem(string itemId)
         {
-            if (farming != null)
-            {
-                farming.SelectHotbarItem(itemId);
-            }
-            if (weapon != null)
-            {
-                weapon.SelectHotbarItem(itemId);
-            }
+            // Kept as a no-op entry point while the shop UI is being
+            // migrated. Older pages may still send this message.
         }
 
         public void SellItem(string itemId)
