@@ -23,6 +23,8 @@ namespace DoNotOpen.Prototype
             public bool hasRaftPosition;
             public float raftX;
             public float raftY;
+            public float playerLocalX;
+            public float playerLocalY;
             public List<OceanResourceSystem.ItemSaveData> resources =
                 new List<OceanResourceSystem.ItemSaveData>();
         }
@@ -69,10 +71,10 @@ namespace DoNotOpen.Prototype
             resources.Initialize(raft.transform, raftAtlas, ocean.OceanBounds);
 
             HookSystem hook = gameObject.AddComponent<HookSystem>();
-            hook.Initialize(raft, resources, raftAtlas);
+            hook.Initialize(raft.Player, resources, raftAtlas);
 
             CameraFollow follow = camera.gameObject.AddComponent<CameraFollow>();
-            follow.Initialize(raft.transform, ocean.OceanBounds);
+            follow.Initialize(raft.Player.transform, ocean.OceanBounds);
 
             RaftHud hud = gameObject.AddComponent<RaftHud>();
             hud.Initialize(raft, resources, pixelFont);
@@ -138,6 +140,7 @@ namespace DoNotOpen.Prototype
                 if (data.hasRaftPosition)
                 {
                     raft.Teleport(new Vector2(data.raftX, data.raftY));
+                    raft.Player.SetLocalPosition(new Vector2(data.playerLocalX, data.playerLocalY));
                 }
             }
             catch (Exception exception)
@@ -159,6 +162,8 @@ namespace DoNotOpen.Prototype
                 hasRaftPosition = true,
                 raftX = position.x,
                 raftY = position.y,
+                playerLocalX = raft.Player.LocalPosition.x,
+                playerLocalY = raft.Player.LocalPosition.y,
                 resources = resources.CaptureItems()
             };
 
