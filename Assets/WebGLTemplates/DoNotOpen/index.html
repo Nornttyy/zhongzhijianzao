@@ -1435,7 +1435,7 @@
     <div id="persistent-hotbar" aria-label="快捷栏"></div>
     <button id="shop-toggle" type="button" aria-label="打开商店">商店</button>
     <button id="sell-toggle" type="button" aria-label="打开出售界面">出售</button>
-    <div id="hotkey-hud">WASD 移动木筏 · 鼠标瞄准 · 左键发射钩子</div>
+    <div id="hotkey-hud">WASD 移动玩家 · 木筏随海流漂移 · 左键发射钩子</div>
     <div id="hotkey-feedback" aria-live="polite"></div>
     <section id="utility-panel" aria-label="背包和商店">
       <div id="utility-title-row">
@@ -2150,7 +2150,7 @@
           persistentHotbar.classList.remove("visible");
           shopToggle.classList.remove("visible");
           sellToggle.classList.remove("visible");
-          hotkeyHud.textContent = "WASD 移动木筏 · 鼠标瞄准 · 左键发射钩子";
+          hotkeyHud.textContent = "WASD 移动玩家 · 木筏随海流漂移 · 左键发射钩子";
           hotkeyHud.classList.add("visible");
           canvas.focus();
         }).catch(message => {
