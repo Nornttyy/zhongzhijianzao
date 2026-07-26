@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#172219">
   <meta name="description" content="种植建造像素游戏">
-  <title>Zhong Zhi Jian Zao · 种植建造</title>
+  <title>Raft Survival · 海上生存</title>
   <style>
     @font-face {
       font-family: "Ark Pixel Web";
@@ -1393,7 +1393,7 @@
         </div>
       </div>
       <div class="menu-card">
-        <div class="title-motion"><h1>种植建造</h1></div>
+        <div class="title-motion"><h1>海上生存</h1></div>
         <button id="start-game" class="pixel-button" type="button">开始游戏</button>
       </div>
     </section>
@@ -1426,7 +1426,7 @@
     </section>
 
     <section id="loading" aria-live="polite">
-      <div class="loading-title">载入店铺</div>
+      <div class="loading-title">载入海面</div>
       <div class="track"><div id="progress"></div></div>
       <div id="status">准备中…</div>
     </section>
@@ -1435,7 +1435,7 @@
     <div id="persistent-hotbar" aria-label="快捷栏"></div>
     <button id="shop-toggle" type="button" aria-label="打开商店">商店</button>
     <button id="sell-toggle" type="button" aria-label="打开出售界面">出售</button>
-    <div id="hotkey-hud">E 背包 · 左侧商店</div>
+    <div id="hotkey-hud">WASD 移动木筏 · 鼠标瞄准 · 左键发射钩子</div>
     <div id="hotkey-feedback" aria-live="polite"></div>
     <section id="utility-panel" aria-label="背包和商店">
       <div id="utility-title-row">
@@ -2106,7 +2106,7 @@
 
     // 每次发布都更换版本号，避免 UnityCache/浏览器继续使用旧的同名构建文件。
     const buildUrl = "Build";
-    const buildVersion = "20260726-shop1";
+    const buildVersion = "20260726-raft1";
     const assetUrl = file => buildUrl + "/" + file + "?v=" + buildVersion;
     const loaderUrl = assetUrl("{{{ LOADER_FILENAME }}}");
     const config = {
@@ -2146,11 +2146,12 @@
           unityInstance = instance;
           gameReady = true;
           loading.classList.add("done");
-          coinDisplay.classList.add("visible");
-          persistentHotbar.classList.add("visible");
-          shopToggle.classList.add("visible");
+          coinDisplay.classList.remove("visible");
+          persistentHotbar.classList.remove("visible");
+          shopToggle.classList.remove("visible");
+          sellToggle.classList.remove("visible");
+          hotkeyHud.textContent = "WASD 移动木筏 · 鼠标瞄准 · 左键发射钩子";
           hotkeyHud.classList.add("visible");
-          sellToggle.classList.add("visible");
           canvas.focus();
         }).catch(message => {
           banner.textContent = message;
@@ -2195,7 +2196,6 @@
       }
       if (key === "e") {
         event.preventDefault();
-        utilityMode === "inventory" ? closeUtility() : openUtility("inventory");
       }
       if (/^[1-9]$/.test(key)) {
         selectedHotbarIndex = Number(key) - 1;
@@ -2213,7 +2213,7 @@
     });
     canvas.addEventListener("contextmenu", event => {
       event.preventDefault();
-      if (gameReady && !utilityMode && menu.classList.contains("hidden")) showHotkeyFeedback("店铺模式暂不需要互动");
+      if (gameReady && !utilityMode && menu.classList.contains("hidden")) showHotkeyFeedback("左键发射钩子，右键无操作");
     });
   </script>
 </body>
