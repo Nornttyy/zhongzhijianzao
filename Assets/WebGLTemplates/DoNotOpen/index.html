@@ -1426,7 +1426,7 @@
     </section>
 
     <section id="loading" aria-live="polite">
-      <div class="loading-title">载入世界</div>
+      <div class="loading-title">载入店铺</div>
       <div class="track"><div id="progress"></div></div>
       <div id="status">准备中…</div>
     </section>
@@ -1435,7 +1435,7 @@
     <div id="persistent-hotbar" aria-label="快捷栏"></div>
     <button id="shop-toggle" type="button" aria-label="打开商店">商店</button>
     <button id="sell-toggle" type="button" aria-label="打开出售界面">出售</button>
-    <div id="hotkey-hud">E 背包 · 左侧商店 · 右键互动</div>
+    <div id="hotkey-hud">E 背包 · 左侧商店</div>
     <div id="hotkey-feedback" aria-live="polite"></div>
     <section id="utility-panel" aria-label="背包和商店">
       <div id="utility-title-row">
@@ -1451,28 +1451,28 @@
         <div class="inventory-tip">按 E 或 Esc 关闭 · 数字键 1–9 选择快捷栏</div>
       </div>
       <div id="shop-view">
-        <div class="shop-intro">购买种子和农场用品。</div>
+        <div class="shop-intro">购买店铺经营所需的物品。</div>
         <div class="shop-grid">
           <button class="shop-button" data-item="wheat_seed" data-price="5" data-label="小麦种子">
-            <span class="shop-icon sprite-r0-c0"></span><span class="shop-copy"><strong>小麦种子</strong><small>种下后可收获小麦 · <span class="price"><span class="coin-sprite coin-small"></span>5</span></small></span>
+            <span class="shop-icon sprite-r0-c0"></span><span class="shop-copy"><strong>小麦种子</strong><small>经营商品 · <span class="price"><span class="coin-sprite coin-small"></span>5</span></small></span>
           </button>
           <button class="shop-button" data-item="carrot_seed" data-price="8" data-label="胡萝卜种子">
-            <span class="shop-icon sprite-r0-c1"></span><span class="shop-copy"><strong>胡萝卜种子</strong><small>种下后可收获胡萝卜 · <span class="price"><span class="coin-sprite coin-small"></span>8</span></small></span>
+            <span class="shop-icon sprite-r0-c1"></span><span class="shop-copy"><strong>胡萝卜种子</strong><small>经营商品 · <span class="price"><span class="coin-sprite coin-small"></span>8</span></small></span>
           </button>
           <button class="shop-button" data-item="fertilizer" data-price="12" data-label="肥料">
-            <span class="shop-icon sprite-r0-c2"></span><span class="shop-copy"><strong>肥料</strong><small>提高耕地品质 · <span class="price"><span class="coin-sprite coin-small"></span>12</span></small></span>
+            <span class="shop-icon sprite-r0-c2"></span><span class="shop-copy"><strong>肥料</strong><small>经营商品 · <span class="price"><span class="coin-sprite coin-small"></span>12</span></small></span>
           </button>
           <button class="shop-button" data-item="wood" data-price="15" data-label="木材">
-            <span class="shop-icon sprite-r0-c3"></span><span class="shop-copy"><strong>木材</strong><small>建造系统的基础材料 · <span class="price"><span class="coin-sprite coin-small"></span>15</span></small></span>
+            <span class="shop-icon sprite-r0-c3"></span><span class="shop-copy"><strong>木材</strong><small>经营商品 · <span class="price"><span class="coin-sprite coin-small"></span>15</span></small></span>
           </button>
           <button class="shop-button" data-item="wood_sword" data-price="30" data-label="木剑">
-            <span class="shop-icon sprite-r3-c0"></span><span class="shop-copy"><strong>木剑</strong><small>左键挥砍 · <span class="price"><span class="coin-sprite coin-small"></span>30</span></small></span>
+            <span class="shop-icon sprite-r3-c0"></span><span class="shop-copy"><strong>木剑</strong><small>经营商品 · <span class="price"><span class="coin-sprite coin-small"></span>30</span></small></span>
           </button>
         </div>
       </div>
       <div id="sell-view">
-        <div class="shop-intro">出售背包里的成熟农作物，换取金币。</div>
-        <div class="shop-section-title">出售农作物</div>
+        <div class="shop-intro">出售背包里的商品，换取金币。</div>
+        <div class="shop-section-title">出售商品</div>
         <div class="shop-grid">
           <button class="shop-button" data-sell-item="wheat_crop" data-price="10" data-label="小麦">
             <span class="shop-icon sprite-r2-c0"></span><span class="shop-copy"><strong>出售小麦</strong><small>每份获得 <span class="price"><span class="coin-sprite coin-small"></span>10</span></small></span>
@@ -2106,7 +2106,7 @@
 
     // 每次发布都更换版本号，避免 UnityCache/浏览器继续使用旧的同名构建文件。
     const buildUrl = "Build";
-    const buildVersion = "20260725-farm24";
+    const buildVersion = "20260726-shop1";
     const assetUrl = file => buildUrl + "/" + file + "?v=" + buildVersion;
     const loaderUrl = assetUrl("{{{ LOADER_FILENAME }}}");
     const config = {
@@ -2213,7 +2213,7 @@
     });
     canvas.addEventListener("contextmenu", event => {
       event.preventDefault();
-      if (gameReady && !utilityMode && menu.classList.contains("hidden")) showHotkeyFeedback("右键：互动 / 建造");
+      if (gameReady && !utilityMode && menu.classList.contains("hidden")) showHotkeyFeedback("店铺模式暂不需要互动");
     });
   </script>
 </body>
