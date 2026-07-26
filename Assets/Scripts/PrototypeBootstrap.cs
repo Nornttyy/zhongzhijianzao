@@ -77,7 +77,7 @@ namespace DoNotOpen.Prototype
             follow.Initialize(raft.Player.transform, ocean.OceanBounds);
 
             RaftHud hud = gameObject.AddComponent<RaftHud>();
-            hud.Initialize(raft, resources, pixelFont);
+            hud.Initialize(raft, resources, pixelFont, raftAtlas);
 
             LoadSavedGame();
             saveReady = true;
