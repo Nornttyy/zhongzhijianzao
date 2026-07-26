@@ -13,6 +13,7 @@ namespace DoNotOpen.Prototype
         private GUIStyle panelStyle;
         private GUIStyle slotStyle;
         private GUIStyle slotCountStyle;
+        private GUIStyle hotbarSlotStyle;
         private bool inventoryOpen;
 
         public void Initialize(
@@ -69,6 +70,7 @@ namespace DoNotOpen.Prototype
                 "   树叶 " + resources.GetCount("leaf") +
                 "   绳卷 " + resources.GetCount("rope");
             GUI.Label(new Rect(24f, 84f, 760f, 26f), inventory, bodyStyle);
+            DrawHotbar();
 
             if (inventoryOpen)
             {
@@ -124,6 +126,39 @@ namespace DoNotOpen.Prototype
                 alignment = TextAnchor.LowerRight,
                 normal = { textColor = Color.white }
             };
+            hotbarSlotStyle = new GUIStyle(GUI.skin.label)
+            {
+                font = pixelFont,
+                fontSize = 12,
+                alignment = TextAnchor.LowerCenter,
+                normal =
+                {
+                    textColor = new Color(0.90f, 0.96f, 0.98f),
+                    background = MakeSolidTexture(new Color(0.08f, 0.22f, 0.29f, 0.92f))
+                }
+            };
+        }
+
+        private void DrawHotbar()
+        {
+            string[] ids = { "wood", "plastic_bottle", "barrel", "leaf", "rope" };
+            string[] names = { "木材", "塑料瓶", "木桶", "树叶", "绳卷" };
+            int[] columns = { 1, 2, 3, 0, 2 };
+            int[] rows = { 1, 1, 1, 2, 2 };
+            const float slotSize = 58f;
+            float startX = 24f;
+            float startY = Screen.height - slotSize - 28f;
+            GUI.Label(new Rect(startX, startY - 23f, 160f, 22f), "物品栏", bodyStyle);
+            for (int i = 0; i < ids.Length; i++)
+            {
+                Rect slot = new Rect(startX + i * slotSize, startY, slotSize - 5f, slotSize - 5f);
+                GUI.Label(slot, names[i], hotbarSlotStyle);
+                DrawIcon(new Rect(slot.x + 14f, slot.y + 6f, 30f, 30f), columns[i], rows[i]);
+                GUI.Label(
+                    new Rect(slot.x + 3f, slot.y + slot.height - 19f, slot.width - 7f, 17f),
+                    GetCountText(ids[i]),
+                    slotCountStyle);
+            }
         }
 
         private void DrawInventory()
