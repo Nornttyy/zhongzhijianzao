@@ -24,6 +24,7 @@ namespace DoNotOpen.Prototype
         private Texture2D swordTexture;
         private string selectedItemId = string.Empty;
         private string selectedWeaponId = string.Empty;
+        private int heldToolSide = 1;
         private float nextAttackTime;
 
         public void Initialize(
@@ -105,14 +106,17 @@ namespace DoNotOpen.Prototype
                 return;
             }
 
-            Vector2 direction = player.Facing.sqrMagnitude > 0.01f
-                ? player.Facing.normalized
-                : Vector2.down;
-            Vector2 offset = direction * 0.56f;
-            // 素材保持竖直，只做左右翻面；左右朝向不再附带向下偏移。
+            if (Mathf.Abs(player.Facing.x) > 0.01f)
+            {
+                heldToolSide = player.Facing.x < 0f ? -1 : 1;
+            }
+
+            // 工具永远放在玩家侧边；上下移动时也不跑到玩家头顶或脚下。
+            Vector2 offset = new Vector2(heldToolSide * 0.56f, 0f);
+            // 素材保持竖直，只做左右翻面。
             heldToolRenderer.transform.localPosition = new Vector3(offset.x, offset.y, 0f);
             heldToolRenderer.transform.localRotation = Quaternion.identity;
-            heldToolRenderer.flipX = direction.x < -0.01f;
+            heldToolRenderer.flipX = heldToolSide < 0;
             heldToolRenderer.flipY = false;
             float toolScale = selectedItemId == "watering_can"
                 ? WateringCanScale
