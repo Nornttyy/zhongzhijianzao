@@ -4,7 +4,7 @@ namespace DoNotOpen.Prototype
 {
     /// <summary>
     /// Handles the first weapon in the game. The wooden sword has a short
-    /// right-click swing now; its hit window is kept in one place so enemies
+    /// left-click swing now; its hit window is kept in one place so enemies
     /// can receive damage when they are added later.
     /// </summary>
     public sealed class WeaponSystem : MonoBehaviour
@@ -18,7 +18,10 @@ namespace DoNotOpen.Prototype
         private ShopSystem shop;
         private Texture2D itemSheet;
         private Sprite swordSprite;
+        private SpriteRenderer heldToolRenderer;
+        private Sprite heldToolSprite;
         private Texture2D swordTexture;
+        private string selectedItemId = string.Empty;
         private string selectedWeaponId = string.Empty;
         private float nextAttackTime;
 
@@ -33,24 +36,131 @@ namespace DoNotOpen.Prototype
             shop = itemShop;
             itemSheet = itemTexture;
             swordSprite = CreateSwordSprite(itemSheet);
+            CreateHeldToolRenderer();
         }
 
         public void SelectHotbarItem(string itemId)
         {
+            selectedItemId = itemId ?? string.Empty;
             selectedWeaponId = itemId == "wood_sword" ? itemId : string.Empty;
+            heldToolSprite = CreateHeldToolSprite(selectedItemId);
+            if (heldToolRenderer != null)
+            {
+                heldToolRenderer.sprite = heldToolSprite;
+                heldToolRenderer.enabled = heldToolSprite != null;
+            }
         }
 
         private void Update()
         {
+            UpdateHeldTool();
             if (player == null || world == null || player.IsInputLocked || world.IsInCave)
             {
                 return;
             }
 
-            if (selectedWeaponId == "wood_sword" && Input.GetMouseButtonDown(1))
+            if (selectedWeaponId == "wood_sword" && Input.GetMouseButtonDown(0))
             {
                 TryAttack();
             }
+        }
+
+        private void LateUpdate()
+        {
+            UpdateHeldTool();
+        }
+
+        private void CreateHeldToolRenderer()
+        {
+            if (player == null || player.PlayerSprite == null)
+            {
+                return;
+            }
+
+            GameObject toolObject = new GameObject("Held Tool");
+            toolObject.transform.SetParent(player.transform, false);
+            heldToolRenderer = toolObject.AddComponent<SpriteRenderer>();
+            heldToolRenderer.sortingLayerID = player.PlayerSprite.sortingLayerID;
+            heldToolRenderer.enabled = false;
+        }
+
+        private void UpdateHeldTool()
+        {
+            if (heldToolRenderer == null || player == null || world == null)
+            {
+                return;
+            }
+
+            bool visible = heldToolSprite != null &&
+                           !player.IsInputLocked &&
+                           !world.IsInCave;
+            heldToolRenderer.enabled = visible;
+            if (!visible)
+            {
+                return;
+            }
+
+            Vector2 direction = player.Facing.sqrMagnitude > 0.01f
+                ? player.Facing.normalized
+                : Vector2.down;
+            Vector2 side = new Vector2(-direction.y, direction.x);
+            Vector2 offset = direction * 0.56f + side * 0.10f;
+            heldToolRenderer.transform.position = player.transform.position +
+                new Vector3(offset.x, offset.y, 0f);
+            float angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg - 90f;
+            heldToolRenderer.transform.rotation = Quaternion.Euler(0f, 0f, angle);
+            heldToolRenderer.sortingOrder =
+                ProceduralWorld.GetSurfaceSortingOrder(player.transform.position.y) + 12;
+        }
+
+        private Sprite CreateHeldToolSprite(string itemId)
+        {
+            if (itemSheet == null)
+            {
+                return null;
+            }
+
+            switch (itemId)
+            {
+                case "watering_can":
+                    return CreateAtlasSprite(itemSheet, 0, 4, "Held Watering Can");
+                case "hoe":
+                    return CreateAtlasSprite(itemSheet, 0, 5, "Held Hoe");
+                case "wood_sword":
+                    return CreateAtlasSprite(itemSheet, 3, 0, "Held Wooden Sword");
+                case "stone_sword":
+                    return CreateAtlasSprite(itemSheet, 3, 1, "Held Stone Sword");
+                case "wood_pickaxe":
+                    return CreateAtlasSprite(itemSheet, 3, 5, "Held Wooden Pickaxe");
+                case "stone_pickaxe":
+                    return CreateAtlasSprite(itemSheet, 3, 6, "Held Stone Pickaxe");
+                default:
+                    return null;
+            }
+        }
+
+        private static Sprite CreateAtlasSprite(
+            Texture2D texture,
+            int row,
+            int column,
+            string spriteName)
+        {
+            if (texture == null || texture.width < (column + 1) * 12 ||
+                texture.height < (row + 1) * 12)
+            {
+                return null;
+            }
+
+            texture.filterMode = FilterMode.Point;
+            texture.wrapMode = TextureWrapMode.Clamp;
+            float y = texture.height - (row + 1) * 12f;
+            Sprite sprite = Sprite.Create(
+                texture,
+                new Rect(column * 12f, y, 12f, 12f),
+                new Vector2(0.5f, 0.10f),
+                12f);
+            sprite.name = spriteName;
+            return sprite;
         }
 
         private void TryAttack()
