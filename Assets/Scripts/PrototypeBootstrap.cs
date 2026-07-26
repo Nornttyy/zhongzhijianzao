@@ -196,7 +196,9 @@ namespace DoNotOpen.Prototype
 
         private static RaftController BuildRaft(Texture2D raftAtlas, Texture2D playerTexture)
         {
-            GameObject raftObject = new GameObject("Player");
+            // Keep the raft and player names distinct: the web UI sends input
+            // lock messages to the child named Player.
+            GameObject raftObject = new GameObject("Raft");
             raftObject.transform.position = Vector3.zero;
 
             Rigidbody2D body = raftObject.AddComponent<Rigidbody2D>();
