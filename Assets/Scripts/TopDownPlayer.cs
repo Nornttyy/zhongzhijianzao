@@ -16,11 +16,24 @@ namespace DoNotOpen.Prototype
         public Vector2 Facing { get; private set; } = Vector2.down;
         public ProceduralWorld World { get; set; }
         public BuildingSystem Buildings { get; set; }
+        public Bounds MovementBounds { get; private set; }
         public bool IsSwimming { get; private set; }
         public bool IsInputLocked { get { return inputLocked; } }
         public int Coins { get; private set; } = StartingCoins;
 
         private bool inputLocked;
+        private bool hasMovementBounds;
+
+        public void SetMovementBounds(Bounds bounds)
+        {
+            MovementBounds = bounds;
+            hasMovementBounds = bounds.size.sqrMagnitude > 0.01f;
+            if (hasMovementBounds && body != null)
+            {
+                body.position = ClampToMovementBounds(body.position);
+                transform.position = body.position;
+            }
+        }
 
         public void SetInputLocked(string locked)
         {
@@ -340,7 +353,23 @@ namespace DoNotOpen.Prototype
                 return;
             }
 
-            body.linearVelocity = movement * Speed;
+            if (hasMovementBounds)
+            {
+                body.position = ClampToMovementBounds(next);
+                body.linearVelocity = Vector2.zero;
+            }
+            else
+            {
+                body.linearVelocity = movement * Speed;
+            }
+        }
+
+        private Vector2 ClampToMovementBounds(Vector2 position)
+        {
+            float margin = BoundaryMargin;
+            return new Vector2(
+                Mathf.Clamp(position.x, MovementBounds.min.x + margin, MovementBounds.max.x - margin),
+                Mathf.Clamp(position.y, MovementBounds.min.y + margin, MovementBounds.max.y - margin));
         }
 
         private void OnDisable()
