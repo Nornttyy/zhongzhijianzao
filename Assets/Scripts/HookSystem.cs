@@ -6,7 +6,7 @@ namespace DoNotOpen.Prototype
     {
         private const float HookSpeed = 9f;
         private const float MaxDistance = 6f;
-        private RaftController raft;
+        private RaftPlayerController player;
         private OceanResourceSystem resources;
         private Camera viewCamera;
         private GameObject hookObject;
@@ -18,9 +18,9 @@ namespace DoNotOpen.Prototype
         private bool returning;
         private float travelled;
 
-        public void Initialize(RaftController controlledRaft, OceanResourceSystem resourceSystem, Texture2D atlas)
+        public void Initialize(RaftPlayerController controlledPlayer, OceanResourceSystem resourceSystem, Texture2D atlas)
         {
-            raft = controlledRaft;
+            player = controlledPlayer;
             resources = resourceSystem;
             viewCamera = Camera.main;
 
@@ -43,7 +43,7 @@ namespace DoNotOpen.Prototype
 
         private void Update()
         {
-            if (raft == null || resources == null || raft.IsInputLocked)
+            if (player == null || resources == null || player.IsInputLocked)
             {
                 return;
             }
@@ -96,7 +96,7 @@ namespace DoNotOpen.Prototype
             }
 
             Vector3 mouse = viewCamera.ScreenToWorldPoint(Input.mousePosition);
-            origin = raft.Position;
+            origin = player.WorldPosition;
             Vector2 direction = ((Vector2)mouse - origin).normalized;
             if (direction.sqrMagnitude < 0.01f)
             {
@@ -116,7 +116,7 @@ namespace DoNotOpen.Prototype
 
         private void UpdateRope(Vector2 hookPosition)
         {
-            rope.SetPosition(0, new Vector3(raft.Position.x, raft.Position.y, 0f));
+            rope.SetPosition(0, new Vector3(player.WorldPosition.x, player.WorldPosition.y, 0f));
             rope.SetPosition(1, new Vector3(hookPosition.x, hookPosition.y, 0f));
         }
 
