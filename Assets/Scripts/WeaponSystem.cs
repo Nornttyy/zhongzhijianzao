@@ -78,7 +78,11 @@ namespace DoNotOpen.Prototype
             }
 
             GameObject toolObject = new GameObject("Held Tool");
-            toolObject.transform.SetParent(player.transform, false);
+            // 挂在角色视觉层上，能跟随玩家的跳跃和轻微抖动，而不是只跟随碰撞体。
+            Transform visualParent = player.VisualRoot != null
+                ? player.VisualRoot
+                : player.transform;
+            toolObject.transform.SetParent(visualParent, false);
             heldToolRenderer = toolObject.AddComponent<SpriteRenderer>();
             heldToolRenderer.sortingLayerID = player.PlayerSprite.sortingLayerID;
             heldToolRenderer.enabled = false;
@@ -105,10 +109,9 @@ namespace DoNotOpen.Prototype
                 : Vector2.down;
             Vector2 side = new Vector2(-direction.y, direction.x);
             Vector2 offset = direction * 0.56f + side * 0.10f;
-            heldToolRenderer.transform.position = player.transform.position +
-                new Vector3(offset.x, offset.y, 0f);
-            float angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg - 90f;
-            heldToolRenderer.transform.rotation = Quaternion.Euler(0f, 0f, angle);
+            // 素材保持竖直，只改变位置；父级视觉层会带来玩家移动时的弹跳和轻微抖动。
+            heldToolRenderer.transform.localPosition = new Vector3(offset.x, offset.y, 0f);
+            heldToolRenderer.transform.localRotation = Quaternion.identity;
             heldToolRenderer.sortingOrder =
                 ProceduralWorld.GetSurfaceSortingOrder(player.transform.position.y) + 12;
         }
