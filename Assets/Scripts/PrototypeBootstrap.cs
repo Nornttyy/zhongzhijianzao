@@ -122,7 +122,7 @@ namespace DoNotOpen.Prototype
             try
             {
                 ForestSaveData data = JsonUtility.FromJson<ForestSaveData>(json);
-                if (data == null || player == null)
+                if (data == null || data.version != 1 || player == null)
                 {
                     return;
                 }
