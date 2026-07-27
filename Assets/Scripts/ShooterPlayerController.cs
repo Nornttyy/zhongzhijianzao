@@ -15,6 +15,7 @@ namespace DoNotOpen.Prototype
         private Vector2 movement;
         private float animationTimer;
         private float idleTimer;
+        private Vector3 visualBaseLocalPosition;
         private int frameIndex;
         private bool inputLocked;
 
@@ -25,6 +26,7 @@ namespace DoNotOpen.Prototype
             body = playerBody;
             renderer = playerRenderer;
             frames = playerFrames;
+            visualBaseLocalPosition = renderer != null ? renderer.transform.localPosition : Vector3.zero;
         }
 
         public void SetInputLocked(string locked)
@@ -108,6 +110,23 @@ namespace DoNotOpen.Prototype
             }
 
             body.MovePosition(body.position + movement * (MoveSpeed * Time.fixedDeltaTime));
+        }
+
+        private void LateUpdate()
+        {
+            if (renderer == null)
+            {
+                return;
+            }
+
+            Vector3 visualPosition = visualBaseLocalPosition;
+            if (!inputLocked && movement.sqrMagnitude < 0.01f)
+            {
+                // 待机时只做轻微上下呼吸，不移动碰撞体本身。
+                visualPosition.y += Mathf.Sin(Time.time * 2.4f) * 0.025f;
+            }
+
+            renderer.transform.localPosition = visualPosition;
         }
     }
 }

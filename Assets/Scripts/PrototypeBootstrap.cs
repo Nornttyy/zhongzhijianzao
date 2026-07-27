@@ -107,7 +107,9 @@ namespace DoNotOpen.Prototype
             collider.size = new Vector2(0.48f, 0.82f);
             collider.offset = new Vector2(0f, -0.05f);
 
-            SpriteRenderer renderer = playerObject.AddComponent<SpriteRenderer>();
+            GameObject visualObject = new GameObject("Player Visual");
+            visualObject.transform.SetParent(playerObject.transform, false);
+            SpriteRenderer renderer = visualObject.AddComponent<SpriteRenderer>();
             renderer.sprite = frames[0];
             renderer.sortingOrder = 20;
             renderer.color = Color.white;
@@ -132,13 +134,17 @@ namespace DoNotOpen.Prototype
             int cellWidth = texture.width / columns;
             int cellHeight = texture.height / rows;
             Sprite[] frames = new Sprite[columns];
+            // 生成图的部分帧边缘会带有相邻帧的一像素残留，切片时留出保护边，避免黄色/深色小点漏出来。
+            const int bleedGuard = 2;
+            float[] pivotX = { 0.683f, 0.671f, 0.671f, 0.680f, 0.674f, 0.667f, 0.664f, 0.615f };
+            float[] pivotY = { 0.215f, 0.215f, 0.215f, 0.196f, 0.193f, 0.193f, 0.193f, 0.196f };
             for (int frame = 0; frame < columns; frame++)
             {
                 // 第一排是男性角色；Unity 纹理原点在左下，所以 y 取上排。
                 Sprite sprite = Sprite.Create(
                     texture,
-                    new Rect(frame * cellWidth, cellHeight, cellWidth, cellHeight),
-                    new Vector2(0.5f, 0.12f),
+                    new Rect(frame * cellWidth + bleedGuard, cellHeight, cellWidth - bleedGuard, cellHeight),
+                    new Vector2(pivotX[frame], pivotY[frame]),
                     256f);
                 sprite.name = "Male Walk Frame " + frame;
                 frames[frame] = sprite;
