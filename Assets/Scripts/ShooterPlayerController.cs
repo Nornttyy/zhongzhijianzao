@@ -5,11 +5,16 @@ namespace DoNotOpen.Prototype
     public sealed class ShooterPlayerController : MonoBehaviour
     {
         private const float MoveSpeed = 4.2f;
+        private const int WalkFrameStart = 3;
+        private const int WalkFrameCount = 5;
+        private const float IdleBlinkDelay = 2.6f;
+        private const float IdleBlinkFrameDuration = 0.14f;
         private Rigidbody2D body;
         private SpriteRenderer renderer;
         private Sprite[] frames;
         private Vector2 movement;
         private float animationTimer;
+        private float idleTimer;
         private int frameIndex;
         private bool inputLocked;
 
@@ -33,6 +38,8 @@ namespace DoNotOpen.Prototype
             if (inputLocked)
             {
                 movement = Vector2.zero;
+                idleTimer = 0f;
+                frameIndex = 0;
                 if (renderer != null && frames != null && frames.Length > 0)
                 {
                     renderer.sprite = frames[0];
@@ -49,22 +56,46 @@ namespace DoNotOpen.Prototype
                 renderer.flipX = movement.x > 0f;
             }
 
-            if (movement.sqrMagnitude < 0.01f || frames == null || frames.Length == 0)
+            if (movement.sqrMagnitude < 0.01f || frames == null || frames.Length < WalkFrameStart + WalkFrameCount)
             {
                 frameIndex = 0;
                 animationTimer = 0f;
-                if (renderer != null && frames != null && frames.Length > 0)
+                if (renderer != null && frames != null && frames.Length >= 3)
                 {
-                    renderer.sprite = frames[0];
+                    idleTimer += Time.deltaTime;
+                    if (idleTimer < IdleBlinkDelay)
+                    {
+                        renderer.sprite = frames[0];
+                    }
+                    else if (idleTimer < IdleBlinkDelay + IdleBlinkFrameDuration)
+                    {
+                        renderer.sprite = frames[1];
+                    }
+                    else if (idleTimer < IdleBlinkDelay + (IdleBlinkFrameDuration * 2f))
+                    {
+                        renderer.sprite = frames[2];
+                    }
+                    else
+                    {
+                        idleTimer = 0f;
+                        renderer.sprite = frames[0];
+                    }
                 }
                 return;
+            }
+
+            idleTimer = 0f;
+            if (frameIndex < WalkFrameStart || frameIndex >= frames.Length)
+            {
+                frameIndex = WalkFrameStart;
+                renderer.sprite = frames[frameIndex];
             }
 
             animationTimer += Time.deltaTime;
             if (animationTimer >= 0.12f)
             {
                 animationTimer = 0f;
-                frameIndex = (frameIndex + 1) % frames.Length;
+                frameIndex = WalkFrameStart + ((frameIndex - WalkFrameStart + 1) % WalkFrameCount);
                 renderer.sprite = frames[frameIndex];
             }
         }

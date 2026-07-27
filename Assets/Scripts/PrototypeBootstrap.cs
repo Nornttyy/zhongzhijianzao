@@ -119,7 +119,7 @@ namespace DoNotOpen.Prototype
 
         private Sprite[] LoadPlayerFrames()
         {
-            Texture2D texture = Resources.Load<Texture2D>("PixelArt/player-sprite-sheet-chibi-6f-transparent");
+            Texture2D texture = Resources.Load<Texture2D>("PixelArt/player-sprite-sheet-chibi-8f-blink-transparent");
             if (texture == null)
             {
                 return null;
@@ -127,7 +127,7 @@ namespace DoNotOpen.Prototype
 
             texture.filterMode = FilterMode.Point;
             texture.wrapMode = TextureWrapMode.Clamp;
-            const int columns = 6;
+            const int columns = 8;
             const int rows = 2;
             int cellWidth = texture.width / columns;
             int cellHeight = texture.height / rows;
