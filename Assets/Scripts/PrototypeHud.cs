@@ -9,6 +9,7 @@ namespace DoNotOpen.Prototype
     {
         private ProceduralWorld world;
         private TopDownPlayer player;
+        private ForestTreeSystem trees;
         private Font pixelFont;
         private GUIStyle titleStyle;
         private GUIStyle bodyStyle;
@@ -33,14 +34,16 @@ namespace DoNotOpen.Prototype
         public void Initialize(
             ProceduralWorld generatedWorld,
             TopDownPlayer controlledPlayer,
-            Font interfaceFont)
+            Font interfaceFont,
+            ForestTreeSystem forestTrees)
         {
             world = generatedWorld;
             player = controlledPlayer;
+            trees = forestTrees;
             pixelFont = interfaceFont;
             if (pixelFont != null)
             {
-                const string hudCharacters = "种植建造金币WASDEI互动背包商店右键坐标0123456789:，";
+                const string hudCharacters = "森林求生木材WASDEI互动背包商店右键左键砍树获得坐标0123456789:，";
                 pixelFont.RequestCharactersInTexture(hudCharacters, 24, FontStyle.Normal);
             }
 
@@ -84,14 +87,14 @@ namespace DoNotOpen.Prototype
                 return;
             }
 
-            GUI.Label(new Rect(32f, 27f, 212f, 25f), "种植建造", titleStyle);
-            GUI.Label(new Rect(32f, 55f, 380f, 20f), "WASD 移动 · E 背包 · 左侧商店 · 右键互动", bodyStyle);
+            GUI.Label(new Rect(32f, 27f, 212f, 25f), "森林求生", titleStyle);
+            GUI.Label(new Rect(32f, 55f, 500f, 20f), "WASD 移动 · 左键砍树 · E 背包 · 右键互动", bodyStyle);
 
             const float coinPanelWidth = 160f;
             Rect coinPanel = new Rect(Screen.width - coinPanelWidth - 18f, 18f, coinPanelWidth, 38f);
             GUI.Label(
                 new Rect(coinPanel.x + 10f, coinPanel.y + 7f, coinPanel.width - 20f, 24f),
-                "金币: " + player.Coins.ToString("N0"),
+                "木材: " + (trees == null ? 0 : trees.WoodCount).ToString("N0"),
                 coinStyle);
 
             Vector2Int tile = world.WorldToTile(player.transform.position);
@@ -102,7 +105,9 @@ namespace DoNotOpen.Prototype
             Rect panel = new Rect((Screen.width - size.x) * 0.5f - 14f, Screen.height - 56f, size.x + 28f, 38f);
             GUI.Label(new Rect(panel.x + 14f, panel.y + 7f, size.x, 24f), coordinates, coordinateStyle);
 
-            string interaction = world.GetInteractionHint(player.transform.position);
+            string interaction = trees == null
+                ? world.GetInteractionHint(player.transform.position)
+                : trees.GetInteractionHint(player.transform.position);
             if (!string.IsNullOrEmpty(interaction))
             {
                 Vector2 hintSize = interactionStyle.CalcSize(new GUIContent(interaction));
@@ -222,11 +227,11 @@ namespace DoNotOpen.Prototype
             GUI.color = Color.white;
             GUI.DrawTexture(card, menuCardTexture);
 
-            GUI.Label(new Rect(card.x + 20f, card.y + 34f, card.width - 40f, 58f), "种植建造", menuTitleStyle);
-            GUI.Label(new Rect(card.x + 20f, card.y + 94f, card.width - 40f, 34f), "像素世界", menuSubtitleStyle);
+            GUI.Label(new Rect(card.x + 20f, card.y + 34f, card.width - 40f, 58f), "森林求生", menuTitleStyle);
+            GUI.Label(new Rect(card.x + 20f, card.y + 94f, card.width - 40f, 34f), "像素森林", menuSubtitleStyle);
             GUI.Label(
                 new Rect(card.x + 35f, card.y + 136f, card.width - 70f, 50f),
-                "一片由你的像素素材生成的大世界。\n先四处走走，寻找湖泊、石地与花草。",
+                "在森林中寻找木材，避开水面与树干，搭建自己的营地。\n先砍下第一棵树，开始求生。",
                 menuDescriptionStyle);
 
             Rect button = new Rect(card.x + (card.width - 190f) * 0.5f, card.y + 204f, 190f, 48f);
@@ -240,7 +245,7 @@ namespace DoNotOpen.Prototype
 
             GUI.Label(
                 new Rect(card.x + 20f, card.y + 270f, card.width - 40f, 28f),
-                "WASD 移动 · E 背包 · 左侧商店 · 右键互动",
+                "WASD 移动 · 左键砍树 · E 背包 · 右键互动",
                 menuControlsStyle);
             GUI.color = Color.white;
         }
