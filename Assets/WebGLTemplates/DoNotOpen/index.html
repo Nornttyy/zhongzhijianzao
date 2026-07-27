@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#172219">
   <meta name="description" content="种植建造像素游戏">
-  <title>Raft Survival · 海上生存</title>
+  <title>Forest Survival · 森林求生</title>
   <style>
     @font-face {
       font-family: "Ark Pixel Web";
@@ -1393,7 +1393,7 @@
         </div>
       </div>
       <div class="menu-card">
-        <div class="title-motion"><h1>海上生存</h1></div>
+        <div class="title-motion"><h1>森林求生</h1></div>
         <button id="start-game" class="pixel-button" type="button">开始游戏</button>
       </div>
     </section>
@@ -1426,7 +1426,7 @@
     </section>
 
     <section id="loading" aria-live="polite">
-      <div class="loading-title">载入海面</div>
+      <div class="loading-title">载入森林</div>
       <div class="track"><div id="progress"></div></div>
       <div id="status">准备中…</div>
     </section>
@@ -1435,7 +1435,7 @@
     <div id="persistent-hotbar" aria-label="快捷栏"></div>
     <button id="shop-toggle" type="button" aria-label="打开商店">商店</button>
     <button id="sell-toggle" type="button" aria-label="打开出售界面">出售</button>
-    <div id="hotkey-hud">WASD 移动玩家 · 木筏随海流漂移 · 左键发射钩子</div>
+    <div id="hotkey-hud">WASD 移动 · 左键砍树 · E 背包</div>
     <div id="hotkey-feedback" aria-live="polite"></div>
     <section id="utility-panel" aria-label="背包和商店">
       <div id="utility-title-row">
@@ -2106,7 +2106,7 @@
 
     // 每次发布都更换版本号，避免 UnityCache/浏览器继续使用旧的同名构建文件。
     const buildUrl = "Build";
-    const buildVersion = "20260726-raft5";
+    const buildVersion = "20260727-forest1";
     const assetUrl = file => buildUrl + "/" + file + "?v=" + buildVersion;
     const loaderUrl = assetUrl("{{{ LOADER_FILENAME }}}");
     const config = {
@@ -2150,7 +2150,7 @@
           persistentHotbar.classList.remove("visible");
           shopToggle.classList.remove("visible");
           sellToggle.classList.remove("visible");
-          hotkeyHud.textContent = "WASD 移动玩家 · 木筏随海流漂移 · 左键蓄力钩子 · E 背包";
+          hotkeyHud.textContent = "WASD 移动 · 左键砍树 · E 背包";
           hotkeyHud.classList.add("visible");
           canvas.focus();
         }).catch(message => {
@@ -2194,6 +2194,11 @@
         event.stopImmediatePropagation();
         return;
       }
+      if (key === "e") {
+        event.preventDefault();
+        utilityMode ? closeUtility() : openUtility("backpack");
+        return;
+      }
       if (/^[1-9]$/.test(key)) {
         selectedHotbarIndex = Number(key) - 1;
         updateInventory();
@@ -2210,7 +2215,7 @@
     });
     canvas.addEventListener("contextmenu", event => {
       event.preventDefault();
-      if (gameReady && !utilityMode && menu.classList.contains("hidden")) showHotkeyFeedback("左键发射钩子，右键无操作");
+      if (gameReady && !utilityMode && menu.classList.contains("hidden")) showHotkeyFeedback("靠近树木后左键砍树");
     });
   </script>
 </body>
