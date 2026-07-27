@@ -43,11 +43,17 @@ namespace DoNotOpen.Prototype
             movement = new Vector2(Input.GetAxisRaw("Horizontal"), Input.GetAxisRaw("Vertical"));
             movement = Vector2.ClampMagnitude(movement, 1f);
 
+            // 保留上一次朝向；左右移动时翻转整张角色图，保证向左/向右都面向移动方向。
+            if (renderer != null && Mathf.Abs(movement.x) > 0.01f)
+            {
+                renderer.flipX = movement.x < 0f;
+            }
+
             if (movement.sqrMagnitude < 0.01f || frames == null || frames.Length == 0)
             {
                 frameIndex = 0;
                 animationTimer = 0f;
-                if (renderer != null)
+                if (renderer != null && frames != null && frames.Length > 0)
                 {
                     renderer.sprite = frames[0];
                 }
