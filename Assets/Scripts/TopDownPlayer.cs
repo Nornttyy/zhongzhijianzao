@@ -16,6 +16,7 @@ namespace DoNotOpen.Prototype
         public Vector2 Facing { get; private set; } = Vector2.down;
         public ProceduralWorld World { get; set; }
         public BuildingSystem Buildings { get; set; }
+        public ForestTreeSystem Trees { get; set; }
         public Bounds MovementBounds { get; private set; }
         public bool IsSwimming { get; private set; }
         public bool IsInputLocked { get { return inputLocked; } }
@@ -335,14 +336,16 @@ namespace DoNotOpen.Prototype
                     : collisionShape.offset;
                 Vector2 horizontal = new Vector2(next.x, body.position.y);
                 if (World.CanStandAt(horizontal + collisionOffset, collisionRadius) &&
-                    (Buildings == null || Buildings.CanStandAt(horizontal + collisionOffset, collisionRadius)))
+                    (Buildings == null || Buildings.CanStandAt(horizontal + collisionOffset, collisionRadius)) &&
+                    (Trees == null || Trees.CanStandAt(horizontal + collisionOffset, collisionRadius)))
                 {
                     body.position = horizontal;
                 }
 
                 Vector2 vertical = new Vector2(body.position.x, next.y);
                 if (World.CanStandAt(vertical + collisionOffset, collisionRadius) &&
-                    (Buildings == null || Buildings.CanStandAt(vertical + collisionOffset, collisionRadius)))
+                    (Buildings == null || Buildings.CanStandAt(vertical + collisionOffset, collisionRadius)) &&
+                    (Trees == null || Trees.CanStandAt(vertical + collisionOffset, collisionRadius)))
                 {
                     body.position = vertical;
                 }
