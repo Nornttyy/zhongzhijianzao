@@ -2089,7 +2089,7 @@
 
     // 每次发布都更换版本号，避免 UnityCache/浏览器继续使用旧的同名构建文件。
     const buildUrl = "Build";
-    const buildVersion = "20260727-shooter5";
+    const buildVersion = "20260727-shooter6";
     const assetUrl = file => buildUrl + "/" + file + "?v=" + buildVersion;
     const loaderUrl = assetUrl("{{{ LOADER_FILENAME }}}");
     const config = {
@@ -2113,10 +2113,34 @@
     let bootStarted = false;
     let gameReady = false;
 
+    function browserSupportsWebGL() {
+      try {
+        const testCanvas = document.createElement("canvas");
+        return Boolean(testCanvas.getContext("webgl2") || testCanvas.getContext("webgl"));
+      } catch (error) {
+        return false;
+      }
+    }
+
+    function showLoadError(message) {
+      const detail = String(message || "");
+      banner.textContent = /webgl/i.test(detail)
+        ? "当前浏览器未启用 WebGL，请使用最新版 Chrome、Edge 或 Safari，并开启硬件加速后刷新。"
+        : "游戏载入失败，请刷新页面重试。";
+      banner.style.display = "block";
+      status.textContent = "载入失败";
+      loading.classList.add("done");
+    }
+
     function bootGame() {
       if (bootStarted) return;
       bootStarted = true;
       loading.classList.add("active");
+
+      if (!browserSupportsWebGL()) {
+        showLoadError("WebGL is not supported");
+        return;
+      }
 
       const loader = document.createElement("script");
       loader.src = loaderUrl;
@@ -2137,15 +2161,11 @@
           hotkeyHud.classList.add("visible");
           canvas.focus();
         }).catch(message => {
-          banner.textContent = message;
-          banner.style.display = "block";
-          status.textContent = "载入失败";
+          showLoadError(message);
         });
       };
       loader.onerror = () => {
-        banner.textContent = "载入失败，请刷新重试";
-        banner.style.display = "block";
-        status.textContent = "载入失败";
+        showLoadError("loader failed");
       };
       document.body.appendChild(loader);
     }
