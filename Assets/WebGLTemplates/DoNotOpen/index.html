@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#172219">
   <meta name="description" content="种植建造像素游戏">
-  <title>Forest Survival · 森林求生</title>
+  <title>Multiplayer Shooter · 多人枪战</title>
   <style>
     @font-face {
       font-family: "Ark Pixel Web";
@@ -263,7 +263,8 @@
       font-size: 16px;
     }
 
-    .world-field input {
+    .world-field input,
+    .world-field select {
       border: 3px solid #1b1b1b;
       padding: 10px;
       background: #777777;
@@ -273,7 +274,8 @@
       outline: none;
     }
 
-    .world-field input:focus {
+    .world-field input:focus,
+    .world-field select:focus {
       border-color: var(--accent);
     }
 
@@ -1393,7 +1395,7 @@
         </div>
       </div>
       <div class="menu-card">
-        <div class="title-motion"><h1>森林求生</h1></div>
+        <div class="title-motion"><h1>多人枪战</h1></div>
         <button id="start-game" class="pixel-button" type="button">开始游戏</button>
       </div>
     </section>
@@ -1402,20 +1404,20 @@
       <div class="world-select-card">
         <div id="world-list-view">
           <div class="world-select-title">选择世界</div>
-          <div class="world-select-subtitle">进入已有存档，或创建一个新的世界。</div>
+          <div class="world-select-subtitle">进入已有存档，或创建一个新的存档。</div>
           <div id="world-list"></div>
-          <div id="world-empty-notice" role="status" aria-live="polite">暂无存档，请创建一个新世界。</div>
+          <div id="world-empty-notice" role="status" aria-live="polite">暂无存档，请创建一个新存档。</div>
           <div class="world-select-actions">
-            <button id="create-world" class="world-action-button" type="button">创建新世界</button>
+            <button id="create-world" class="world-action-button" type="button">创建存档</button>
             <button id="back-title" class="world-action-button secondary" type="button">返回</button>
           </div>
           <div id="world-select-notice" role="status" aria-live="polite"></div>
         </div>
         <div id="world-create-view">
-          <div class="world-select-title">创建新世界</div>
-          <div class="world-select-subtitle">为这个世界设置名称和种子。</div>
+          <div class="world-select-title">创建存档</div>
+          <div class="world-select-subtitle">设置存档名称并选择游戏难度。</div>
           <label class="world-field">世界名称<input id="world-name" type="text" maxlength="20" value="新世界"></label>
-          <label class="world-field">世界种子<input id="world-seed" type="text" inputmode="numeric" placeholder="留空则随机生成"></label>
+          <label class="world-field">游戏难度<select id="world-difficulty"><option value="easy">简单</option><option value="normal" selected>普通</option><option value="hard">困难</option></select></label>
           <div class="world-select-actions">
             <button id="confirm-create-world" class="world-action-button" type="button">创建并进入</button>
             <button id="cancel-create-world" class="world-action-button secondary" type="button">返回</button>
@@ -1426,7 +1428,7 @@
     </section>
 
     <section id="loading" aria-live="polite">
-      <div class="loading-title">载入森林</div>
+      <div class="loading-title">载入房间</div>
       <div class="track"><div id="progress"></div></div>
       <div id="status">准备中…</div>
     </section>
@@ -1507,7 +1509,7 @@
     const backTitle = document.querySelector("#back-title");
     const worldSelectNotice = document.querySelector("#world-select-notice");
     const worldName = document.querySelector("#world-name");
-    const worldSeed = document.querySelector("#world-seed");
+    const worldDifficulty = document.querySelector("#world-difficulty");
     const confirmCreateWorld = document.querySelector("#confirm-create-world");
     const cancelCreateWorld = document.querySelector("#cancel-create-world");
     const worldCreateNotice = document.querySelector("#world-create-notice");
@@ -1545,7 +1547,7 @@
     const legacySaveStorageKey = "zhongzhijianzao-save-v1";
     let activeSaveSlot = "world-1";
     let pendingCreateSlot = null;
-    let selectedWorldSeed = 271828;
+    let selectedWorldDifficulty = "normal";
     let selectedWorldName = "世界 1";
     const shopInventory = {
       wheat_seed: 0,
@@ -1579,13 +1581,12 @@
       try {
         const raw = localStorage.getItem(worldMetaKey(slotId));
         const meta = raw ? JSON.parse(raw) : {};
-        const parsedSeed = Number(meta.seed);
         return {
           name: String(meta.name || (worldSlots.find(slot => slot.id === slotId) || {}).label || slotId),
-          seed: Number.isFinite(parsedSeed) && parsedSeed !== 0 ? Math.abs(Math.trunc(parsedSeed)) : 271828
+          difficulty: ["easy", "normal", "hard"].includes(meta.difficulty) ? meta.difficulty : "normal"
         };
       } catch (error) {
-        return { name: String((worldSlots.find(slot => slot.id === slotId) || {}).label || slotId), seed: 271828 };
+        return { name: String((worldSlots.find(slot => slot.id === slotId) || {}).label || slotId), difficulty: "normal" };
       }
     }
 
@@ -1595,19 +1596,6 @@
       } catch (error) {
         // 浏览器禁用本地存储时，仍允许创建临时世界。
       }
-    }
-
-    function generateWorldSeed() {
-      return Math.floor(Math.random() * 2147483646) + 1;
-    }
-
-    function parseWorldSeed(raw) {
-      const trimmed = String(raw || "").trim();
-      if (!trimmed) return generateWorldSeed();
-      if (!/^[+-]?\d+$/.test(trimmed)) return null;
-      const parsed = Number.parseInt(trimmed, 10);
-      if (!Number.isFinite(parsed) || parsed === 0) return null;
-      return Math.abs(parsed) % 2147483647 || 1;
     }
 
     function escapeHtml(value) {
@@ -1635,7 +1623,7 @@
           localStorage.setItem(
             saveStorageKeyFor("world-1"),
             localStorage.getItem(legacySaveStorageKey));
-          saveWorldMeta("world-1", { name: "世界 1", seed: 271828 });
+          saveWorldMeta("world-1", { name: "世界 1", difficulty: "normal" });
         }
       } catch (error) {
         // 浏览器禁用本地存储时，仍允许创建临时世界。
@@ -1654,7 +1642,7 @@
         const meta = readWorldMeta(slot.id);
         return "<div class=\"world-card has-save\">" +
           "<div class=\"world-card-copy\"><strong>" + escapeHtml(meta.name) + "</strong>" +
-          "<small>已有存档 · 种子 " + meta.seed + "</small></div>" +
+          "<small>已有存档 · 难度 " + ({ easy: "简单", normal: "普通", hard: "困难" }[meta.difficulty] || "普通") + "</small></div>" +
           "<div class=\"world-card-actions\">" +
           "<button class=\"world-card-button\" type=\"button\" data-world-slot=\"" + slot.id +
           "\" data-world-action=\"enter\">进入世界</button>" +
@@ -1700,7 +1688,7 @@
       }
       pendingCreateSlot = emptySlot.id;
       worldName.value = "新世界";
-      worldSeed.value = "";
+      worldDifficulty.value = "normal";
       worldCreateNotice.textContent = "";
       worldListView.style.display = "none";
       worldCreateView.classList.add("visible");
@@ -1717,7 +1705,7 @@
     function startWorld(slotId, resetSave, metadata) {
       const meta = metadata || readWorldMeta(slotId);
       activeSaveSlot = slotId;
-      selectedWorldSeed = meta.seed;
+      selectedWorldDifficulty = meta.difficulty || "normal";
       selectedWorldName = meta.name;
       if (resetSave) {
         try {
@@ -1742,7 +1730,8 @@
       worldSelect.classList.add("visible");
     }
 
-    window.GetSelectedWorldSeed = () => selectedWorldSeed;
+    window.GetSelectedWorldSeed = () => 0;
+    window.GetSelectedWorldDifficulty = () => selectedWorldDifficulty;
 
     window.SaveGameData = json => {
       try {
@@ -2028,13 +2017,7 @@
         return;
       }
       const name = (worldName.value || "新世界").trim().slice(0, 20) || "新世界";
-      const seed = parseWorldSeed(worldSeed.value);
-      if (seed === null) {
-        worldCreateNotice.textContent = "种子只能填写数字，或留空随机生成。";
-        worldSeed.focus();
-        return;
-      }
-      const metadata = { name, seed };
+      const metadata = { name, difficulty: worldDifficulty.value || "normal" };
       saveWorldMeta(pendingCreateSlot, metadata);
       startWorld(pendingCreateSlot, true, metadata);
     });
@@ -2106,7 +2089,7 @@
 
     // 每次发布都更换版本号，避免 UnityCache/浏览器继续使用旧的同名构建文件。
     const buildUrl = "Build";
-    const buildVersion = "20260727-forest2";
+    const buildVersion = "20260727-shooter1";
     const assetUrl = file => buildUrl + "/" + file + "?v=" + buildVersion;
     const loaderUrl = assetUrl("{{{ LOADER_FILENAME }}}");
     const config = {

@@ -1,42 +1,18 @@
-using System;
 using UnityEngine;
-#if UNITY_WEBGL && !UNITY_EDITOR
-using System.Runtime.InteropServices;
-#endif
 
 namespace DoNotOpen.Prototype
 {
     public sealed class PrototypeBootstrap : MonoBehaviour
     {
-        private const float AutosaveInterval = 1.5f;
-        private TopDownPlayer player;
-        private ForestTreeSystem trees;
-        private bool saveReady;
-        private float nextAutosaveTime;
-
-        [Serializable]
-        private sealed class ForestSaveData
-        {
-            public int version = 1;
-            public float playerX;
-            public float playerY;
-            public int wood;
-        }
-
-#if UNITY_WEBGL && !UNITY_EDITOR
-        [DllImport("__Internal")]
-        private static extern void SaveGameData(string json);
-
-        [DllImport("__Internal")]
-        private static extern string LoadGameData();
-#endif
+        private Texture2D generatedTexture;
+        private Sprite generatedSprite;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void EnsurePrototypeExists()
         {
             if (FindFirstObjectByType<PrototypeBootstrap>() == null)
             {
-                new GameObject("Forest Survival Bootstrap").AddComponent<PrototypeBootstrap>();
+                new GameObject("Shooter Room Bootstrap").AddComponent<PrototypeBootstrap>();
             }
         }
 
@@ -45,140 +21,35 @@ namespace DoNotOpen.Prototype
             Application.targetFrameRate = 120;
             QualitySettings.antiAliasing = 0;
 
-            Texture2D worldTexture = LoadPixelTexture("PixelArt/world-tiles");
-            Texture2D playerTexture = LoadPixelTexture("PixelArt/player-idle");
-            Texture2D caveEntranceTexture = LoadPixelTexture("PixelArt/cave-entrance");
-            Texture2D treeTexture = LoadPixelTexture("PixelArt/forest-tree");
-            Font pixelFont = Resources.Load<Font>("Fonts/ark-pixel-12px");
-            if (worldTexture == null || playerTexture == null ||
-                caveEntranceTexture == null || treeTexture == null || pixelFont == null)
+            GameObject farmGrid = GameObject.Find("Farm Grid");
+            if (farmGrid != null)
             {
-                Debug.LogError("森林求生素材加载失败，请确认 forest-tree.png 等素材存在。");
-                return;
+                farmGrid.SetActive(false);
             }
 
             Camera camera = BuildCamera();
-            player = BuildPlayer(playerTexture);
-
-            ProceduralWorld world = gameObject.AddComponent<ProceduralWorld>();
-            world.Initialize(worldTexture, caveEntranceTexture, player);
-            player.World = world;
-
-            trees = gameObject.AddComponent<ForestTreeSystem>();
-            trees.Initialize(world, player, treeTexture);
-            player.Trees = trees;
-
-            CameraFollow follow = camera.gameObject.AddComponent<CameraFollow>();
-            follow.Initialize(player.transform, world.MapBounds);
-
-            PrototypeHud hud = gameObject.AddComponent<PrototypeHud>();
-            hud.Initialize(world, player, pixelFont, trees);
-
-            LoadSavedGame();
-            saveReady = true;
-            nextAutosaveTime = Time.time + AutosaveInterval;
-        }
-
-        private void Update()
-        {
-            if (!saveReady || Time.time < nextAutosaveTime)
+            Sprite[] playerFrames = LoadPlayerFrames();
+            if (playerFrames == null || playerFrames.Length == 0)
             {
+                Debug.LogError("多人枪战玩家动作帧加载失败。");
                 return;
             }
 
-            SaveCurrentGame();
-            nextAutosaveTime = Time.time + AutosaveInterval;
-        }
+            BuildRoom();
+            ShooterPlayerController player = BuildPlayer(playerFrames);
 
-        private void OnApplicationPause(bool pauseStatus)
-        {
-            if (pauseStatus)
-            {
-                SaveCurrentGame();
-            }
-        }
+            ShooterRoomHud hud = gameObject.AddComponent<ShooterRoomHud>();
+            hud.Initialize(player);
 
-        private void OnApplicationFocus(bool hasFocus)
-        {
-            if (!hasFocus)
-            {
-                SaveCurrentGame();
-            }
-        }
-
-        private void LoadSavedGame()
-        {
-            string json;
-#if UNITY_WEBGL && !UNITY_EDITOR
-            json = LoadGameData();
-#else
-            json = PlayerPrefs.GetString("zhongzhijianzao-forest-save-v1", string.Empty);
-#endif
-            if (string.IsNullOrEmpty(json))
-            {
-                return;
-            }
-
-            try
-            {
-                ForestSaveData data = JsonUtility.FromJson<ForestSaveData>(json);
-                if (data == null || data.version != 1 || player == null)
-                {
-                    return;
-                }
-
-                player.Teleport(new Vector2(data.playerX, data.playerY));
-                if (trees != null)
-                {
-                    trees.SetWoodCount(data.wood);
-                }
-            }
-            catch (Exception exception)
-            {
-                Debug.LogWarning("森林存档读取失败，将使用新的营地：" + exception.Message);
-            }
-        }
-
-        private void SaveCurrentGame()
-        {
-            if (!saveReady || player == null || trees == null)
-            {
-                return;
-            }
-
-            ForestSaveData data = new ForestSaveData
-            {
-                playerX = player.transform.position.x,
-                playerY = player.transform.position.y,
-                wood = trees.WoodCount
-            };
-            string json = JsonUtility.ToJson(data);
-#if UNITY_WEBGL && !UNITY_EDITOR
-            SaveGameData(json);
-#else
-            PlayerPrefs.SetString("zhongzhijianzao-forest-save-v1", json);
-            PlayerPrefs.Save();
-#endif
+            camera.transform.position = new Vector3(0f, 0f, -10f);
         }
 
         public void SaveGameNow()
         {
-            SaveCurrentGame();
+            // 存档界面沿用旧网页流程；枪战房间的存档系统稍后接入。
         }
 
-        public void SelectHotbarItem(string itemId)
-        {
-        }
-
-        public void BuyItem(string itemId)
-        {
-        }
-
-        public void SellItem(string itemId)
-        {
-        }
-
-        private static Camera BuildCamera()
+        private Camera BuildCamera()
         {
             Camera camera = Camera.main;
             if (camera == null)
@@ -189,18 +60,41 @@ namespace DoNotOpen.Prototype
                 cameraObject.AddComponent<AudioListener>();
             }
 
-            camera.transform.SetPositionAndRotation(new Vector3(0f, -1f, -10f), Quaternion.identity);
             camera.orthographic = true;
-            camera.orthographicSize = 5.65f;
+            camera.orthographicSize = 7.5f;
             camera.clearFlags = CameraClearFlags.SolidColor;
-            camera.backgroundColor = new Color32(35, 65, 43, 255);
+            camera.backgroundColor = new Color32(48, 48, 52, 255);
             return camera;
         }
 
-        private static TopDownPlayer BuildPlayer(Texture2D playerTexture)
+        private void BuildRoom()
+        {
+            Transform room = new GameObject("Gray Shooter Room").transform;
+            room.SetParent(transform, false);
+
+            Sprite floorSprite = CreateSolidSprite("Room Floor", new Color32(117, 117, 122, 255));
+            Sprite wallSprite = CreateSolidSprite("Room Wall", new Color32(46, 47, 53, 255));
+
+            CreateRoomPart("Floor", room, floorSprite, new Vector3(0f, 0f, 1f), new Vector3(20f, 12f, 1f), -10, false);
+            CreateRoomPart("Top Wall", room, wallSprite, new Vector3(0f, 6.45f, 0f), new Vector3(21f, 0.9f, 1f), -5, true);
+            CreateRoomPart("Bottom Wall", room, wallSprite, new Vector3(0f, -6.45f, 0f), new Vector3(21f, 0.9f, 1f), -5, true);
+            CreateRoomPart("Left Wall", room, wallSprite, new Vector3(-10.45f, 0f, 0f), new Vector3(0.9f, 12.9f, 1f), -5, true);
+            CreateRoomPart("Right Wall", room, wallSprite, new Vector3(10.45f, 0f, 0f), new Vector3(0.9f, 12.9f, 1f), -5, true);
+
+            // 四个低调的角柱，让房间边界在游戏中更容易辨认。
+            Color32 cornerColor = new Color32(72, 73, 80, 255);
+            Sprite cornerSprite = CreateSolidSprite("Room Corner", cornerColor);
+            CreateRoomPart("Corner TL", room, cornerSprite, new Vector3(-10f, 6f, -0.1f), new Vector3(0.45f, 0.45f, 1f), -4, false);
+            CreateRoomPart("Corner TR", room, cornerSprite, new Vector3(10f, 6f, -0.1f), new Vector3(0.45f, 0.45f, 1f), -4, false);
+            CreateRoomPart("Corner BL", room, cornerSprite, new Vector3(-10f, -6f, -0.1f), new Vector3(0.45f, 0.45f, 1f), -4, false);
+            CreateRoomPart("Corner BR", room, cornerSprite, new Vector3(10f, -6f, -0.1f), new Vector3(0.45f, 0.45f, 1f), -4, false);
+        }
+
+        private ShooterPlayerController BuildPlayer(Sprite[] frames)
         {
             GameObject playerObject = new GameObject("Player");
-            playerObject.transform.position = new Vector3(1f, -1f, 0f);
+            playerObject.transform.SetParent(transform, false);
+            playerObject.transform.position = Vector3.zero;
 
             Rigidbody2D body = playerObject.AddComponent<Rigidbody2D>();
             body.gravityScale = 0f;
@@ -208,36 +102,103 @@ namespace DoNotOpen.Prototype
             body.interpolation = RigidbodyInterpolation2D.Interpolate;
             body.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
 
-            CircleCollider2D collider = playerObject.AddComponent<CircleCollider2D>();
-            collider.radius = 0.2f;
-            collider.offset = new Vector2(0f, 0.22f);
+            CapsuleCollider2D collider = playerObject.AddComponent<CapsuleCollider2D>();
+            collider.direction = CapsuleDirection2D.Vertical;
+            collider.size = new Vector2(0.48f, 0.82f);
+            collider.offset = new Vector2(0f, -0.05f);
 
-            GameObject visual = new GameObject("Player Art");
-            visual.transform.SetParent(playerObject.transform, false);
-            SpriteRenderer renderer = visual.AddComponent<SpriteRenderer>();
-            renderer.sprite = Sprite.Create(
-                playerTexture,
-                new Rect(0f, 0f, playerTexture.width, playerTexture.height),
-                new Vector2(0.5f, 0.08f),
-                12f);
-            renderer.sortingOrder = 320;
+            SpriteRenderer renderer = playerObject.AddComponent<SpriteRenderer>();
+            renderer.sprite = frames[0];
+            renderer.sortingOrder = 20;
+            renderer.color = Color.white;
 
-            TopDownPlayer controller = playerObject.AddComponent<TopDownPlayer>();
-            controller.Speed = 3.6f;
-            controller.ConfigureVisual(visual.transform, renderer);
+            ShooterPlayerController controller = playerObject.AddComponent<ShooterPlayerController>();
+            controller.Initialize(body, renderer, frames);
             return controller;
         }
 
-        private static Texture2D LoadPixelTexture(string resourcePath)
+        private Sprite[] LoadPlayerFrames()
         {
-            Texture2D texture = Resources.Load<Texture2D>(resourcePath);
-            if (texture != null)
+            Texture2D texture = Resources.Load<Texture2D>("PixelArt/player-sprite-sheet-chibi-transparent");
+            if (texture == null)
             {
-                texture.filterMode = FilterMode.Point;
-                texture.wrapMode = TextureWrapMode.Clamp;
+                return null;
             }
 
-            return texture;
+            texture.filterMode = FilterMode.Point;
+            texture.wrapMode = TextureWrapMode.Clamp;
+            const int columns = 4;
+            const int rows = 2;
+            int cellWidth = texture.width / columns;
+            int cellHeight = texture.height / rows;
+            Sprite[] frames = new Sprite[columns];
+            for (int frame = 0; frame < columns; frame++)
+            {
+                // 第一排是男性角色；Unity 纹理原点在左下，所以 y 取上排。
+                Sprite sprite = Sprite.Create(
+                    texture,
+                    new Rect(frame * cellWidth, cellHeight, cellWidth, cellHeight),
+                    new Vector2(0.5f, 0.12f),
+                    256f);
+                sprite.name = "Male Walk Frame " + frame;
+                frames[frame] = sprite;
+            }
+
+            return frames;
+        }
+
+        private GameObject CreateRoomPart(
+            string partName,
+            Transform parent,
+            Sprite sprite,
+            Vector3 position,
+            Vector3 scale,
+            int sortingOrder,
+            bool collider)
+        {
+            GameObject part = new GameObject(partName);
+            part.transform.SetParent(parent, false);
+            part.transform.localPosition = position;
+            part.transform.localScale = scale;
+
+            SpriteRenderer renderer = part.AddComponent<SpriteRenderer>();
+            renderer.sprite = sprite;
+            renderer.sortingOrder = sortingOrder;
+            if (collider)
+            {
+                BoxCollider2D box = part.AddComponent<BoxCollider2D>();
+                box.size = Vector2.one;
+            }
+
+            return part;
+        }
+
+        private Sprite CreateSolidSprite(string name, Color32 color)
+        {
+            Texture2D texture = new Texture2D(2, 2, TextureFormat.RGBA32, false)
+            {
+                name = name + " Texture",
+                filterMode = FilterMode.Point,
+                wrapMode = TextureWrapMode.Clamp
+            };
+            texture.SetPixels32(new[] { color, color, color, color });
+            texture.Apply(false, true);
+            generatedTexture = texture;
+            generatedSprite = Sprite.Create(texture, new Rect(0f, 0f, 2f, 2f), new Vector2(0.5f, 0.5f), 1f);
+            generatedSprite.name = name;
+            return generatedSprite;
+        }
+
+        private void OnDestroy()
+        {
+            if (generatedSprite != null)
+            {
+                Destroy(generatedSprite);
+            }
+            if (generatedTexture != null)
+            {
+                Destroy(generatedTexture);
+            }
         }
     }
 }
