@@ -46,7 +46,7 @@ namespace DoNotOpen.Prototype
             // 保留上一次朝向；左右移动时翻转整张角色图，保证向左/向右都面向移动方向。
             if (renderer != null && Mathf.Abs(movement.x) > 0.01f)
             {
-                renderer.flipX = movement.x < 0f;
+                renderer.flipX = movement.x > 0f;
             }
 
             if (movement.sqrMagnitude < 0.01f || frames == null || frames.Length == 0)
